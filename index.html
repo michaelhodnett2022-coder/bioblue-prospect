@@ -160,8 +160,9 @@
       <div class="section-header-icon">🏢</div>
       <div class="section-header-text">
         <h2>1. Client Details</h2>
-        <p>BioBlue naming convention · Required to create client record</p>
+        <p>Complete this section to create the client record</p>
       </div>
+      <div style="background:rgba(255,255,255,0.2);border-radius:6px;padding:3px 8px;font-size:10px;font-weight:700;color:white;letter-spacing:0.5px;flex-shrink:0;">REQUIRED</div>
       <div class="section-toggle" id="toggle-s1">▼</div>
     </div>
     <div class="section-body" id="s1">
@@ -293,6 +294,12 @@
     </div>
   </div>
 
+  <div style="display:flex;align-items:center;gap:12px;margin:4px 0 8px;">
+    <div style="flex:1;height:1.5px;background:var(--gray-light);"></div>
+    <span style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--gray-mid);white-space:nowrap;">Optional sections below</span>
+    <div style="flex:1;height:1.5px;background:var(--gray-light);"></div>
+  </div>
+
   <!-- SECTION 2: SITE CONTACT -->
   <div class="section-card">
     <div class="section-header" onclick="toggleSection('s2')">
@@ -301,9 +308,9 @@
         <h2>2. Site Contact</h2>
         <p>Key person at this site</p>
       </div>
-      <div class="section-toggle" id="toggle-s2">▼</div>
+      <div class="section-toggle" id="toggle-s2">▶</div>
     </div>
-    <div class="section-body" id="s2">
+    <div class="section-body collapsed" id="s2">
       <div class="field-row">
         <div class="field-group">
           <label class="field-label required">Contact Name</label>
@@ -335,9 +342,9 @@
         <h2>2. Opportunity <span style="font-size:10px;font-weight:400;opacity:0.7;">(optional)</span></h2>
         <p>Product interest and current setup</p>
       </div>
-      <div class="section-toggle" id="toggle-s3">▼</div>
+      <div class="section-toggle" id="toggle-s3">▶</div>
     </div>
-    <div class="section-body" id="s3">
+    <div class="section-body collapsed" id="s3">
 
       <div class="field-group" style="margin-bottom:16px;">
         <label class="field-label required">Product Interest</label>
@@ -371,9 +378,9 @@
         <h2>3. Conversation <span style="font-size:10px;font-weight:400;opacity:0.7;">(optional)</span></h2>
         <p>Notes, follow-up and next steps</p>
       </div>
-      <div class="section-toggle" id="toggle-s4">▼</div>
+      <div class="section-toggle" id="toggle-s4">▶</div>
     </div>
-    <div class="section-body" id="s4">
+    <div class="section-body collapsed" id="s4">
 
       <div class="field-group" style="margin-bottom:16px;">
         <label class="field-label required">Conversation Notes</label>
@@ -407,9 +414,9 @@
         <h2>4. Sign-Off</h2>
         <p>BDM confirmation</p>
       </div>
-      <div class="section-toggle" id="toggle-s5">▼</div>
+      <div class="section-toggle" id="toggle-s5">▶</div>
     </div>
-    <div class="section-body" id="s5">
+    <div class="section-body collapsed" id="s5">
       <div class="field-row">
         <div class="field-group">
           <label class="field-label required">BDM</label>
@@ -884,9 +891,7 @@ async function uploadAndSend() {
   if (!d.companyName.trim()) { showToast('⚠️ Company name required'); return; }
   if (!d.prospectDate) { showToast('⚠️ Date required'); return; }
   if (!d.contactName.trim()) { showToast('⚠️ Contact name required'); return; }
-  if (!d.productInterest) { showToast('⚠️ Please select product interest'); return; }
-  if (!d.convNotes.trim()) { showToast('⚠️ Conversation notes required'); return; }
-  if (!d.bdmName) { showToast('⚠️ Please select BDM'); return; }
+  if (!d.bdmName) { showToast('⚠️ Please select your name'); return; }
 
   showToast('⏳ Generating PDF...');
   const pdfDoc = await generatePDF(true);
