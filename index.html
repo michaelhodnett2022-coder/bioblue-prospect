@@ -266,27 +266,24 @@
 
       <!-- SITE CONTACT — OPTIONAL -->
       <div style="border-top:1px solid var(--gray-light);margin:16px 0 12px;padding-top:14px;">
-        <div style="font-size:10px;font-weight:700;color:var(--gray-mid);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">
-          Site Contact <span style="font-weight:400;">(optional — complete if known)</span>
-        </div>
         <div class="field-row">
           <div class="field-group">
             <label class="field-label">Contact Name</label>
-            <input type="text" id="contactName" placeholder="Full name">
+            <input type="text" id="s1contactName" placeholder="Full name">
           </div>
           <div class="field-group">
             <label class="field-label">Title / Role</label>
-            <input type="text" id="contactRole" placeholder="e.g. Fleet Manager">
+            <input type="text" id="s1contactRole" placeholder="e.g. Fleet Manager">
           </div>
         </div>
         <div class="field-row">
           <div class="field-group">
             <label class="field-label">Mobile</label>
-            <input type="tel" id="contactMobile" placeholder="04XX XXX XXX">
+            <input type="tel" id="s1contactMobile" placeholder="04XX XXX XXX">
           </div>
           <div class="field-group">
             <label class="field-label">Email</label>
-            <input type="email" id="contactEmail" placeholder="contact@company.com">
+            <input type="email" id="s1contactEmail" placeholder="contact@company.com">
           </div>
         </div>
       </div>
@@ -311,9 +308,20 @@
       <div class="section-toggle" id="toggle-s2">▶</div>
     </div>
     <div class="section-body collapsed" id="s2">
+      <!-- AS ABOVE CHECKBOX -->
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--purple-pale);border:1.5px solid var(--purple-light);border-radius:8px;margin-bottom:12px;cursor:pointer;" onclick="document.getElementById('asAboveChk').click()">
+        <input type="checkbox" id="asAboveChk" autocomplete="off"
+          onchange="applyAsAbove(this.checked)"
+          style="width:18px;height:18px;accent-color:var(--purple);cursor:pointer;flex-shrink:0;">
+        <div>
+          <div style="font-size:13px;font-weight:700;color:var(--purple-dark);">Same as above contact details</div>
+          <div style="font-size:11px;color:var(--gray-mid);">Tick to copy contact details from Section 1</div>
+        </div>
+      </div>
+
       <div class="field-row">
         <div class="field-group">
-          <label class="field-label required">Contact Name</label>
+          <label class="field-label">Contact Name</label>
           <input type="text" id="contactName" placeholder="Full name" oninput="updateProgress()">
         </div>
         <div class="field-group">
@@ -485,6 +493,36 @@ function setInterest(val) {
 }
 
 // =====================================================================
+// AS ABOVE — copy Section 1 contact to Section 2
+// =====================================================================
+function applyAsAbove(checked) {
+  const fields = [
+    ['s1contactName',   'contactName'],
+    ['s1contactRole',   'contactRole'],
+    ['s1contactMobile', 'contactMobile'],
+    ['s1contactEmail',  'contactEmail'],
+  ];
+  fields.forEach(([src, dst]) => {
+    const srcEl = document.getElementById(src);
+    const dstEl = document.getElementById(dst);
+    if (!srcEl || !dstEl) return;
+    if (checked) {
+      dstEl.value    = srcEl.value;
+      dstEl.readOnly = true;
+      dstEl.style.background   = 'var(--purple-pale)';
+      dstEl.style.borderColor  = 'var(--purple-light)';
+      dstEl.style.color        = 'var(--purple-dark)';
+    } else {
+      dstEl.readOnly = false;
+      dstEl.style.background   = '';
+      dstEl.style.borderColor  = '';
+      dstEl.style.color        = '';
+    }
+  });
+  updateProgress();
+}
+
+// =====================================================================
 // NAMING CONVENTION
 // =====================================================================
 function generateSiteName() {
@@ -630,10 +668,14 @@ function collectData() {
     suburb:           g('suburb'),
     state:            g('state'),
     postcode:         g('postcode'),
-    contactName:      g('contactName'),
-    contactRole:      g('contactRole'),
-    contactMobile:    g('contactMobile'),
-    contactEmail:     g('contactEmail'),
+    primaryContactName:  g('s1contactName'),
+    primaryContactRole:  g('s1contactRole'),
+    primaryContactMobile:g('s1contactMobile'),
+    primaryContactEmail: g('s1contactEmail'),
+    contactName:         g('contactName'),
+    contactRole:         g('contactRole'),
+    contactMobile:       g('contactMobile'),
+    contactEmail:        g('contactEmail'),
     productInterest: productInterest,
     currentSupplier: g('currentSupplier'),
     estVolume:       g('estVolume'),
@@ -949,13 +991,16 @@ function confirmClear() {
 }
 function clearAll() {
   ['billingEntity','siteLocationName','generatedSiteName','companyName','prospectDate',
-   'siteAddress','suburb','postcode','contactName','contactRole',
-   'contactMobile','contactEmail','currentSupplier','estVolume','convNotes',
+   'siteAddress','suburb','postcode',
+   's1contactName','s1contactRole','s1contactMobile','s1contactEmail',
+   'contactName','contactRole','contactMobile','contactEmail',
+   'currentSupplier','estVolume','convNotes',
    'followupDate','followupAction','bdmEmail'].forEach(id => {
     const el = document.getElementById(id); if(el) el.value='';
   });
   document.getElementById('state').selectedIndex = 0;
   document.getElementById('bdmName').selectedIndex = 0;
+  const asAbove = document.getElementById('asAboveChk'); if(asAbove) { asAbove.checked = false; applyAsAbove(false); }
   setInterest('');
   productInterest = '';
   updateProgress();
