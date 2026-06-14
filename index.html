@@ -336,7 +336,7 @@
 
       <div class="field-row">
         <div class="field-group">
-          <label class="field-label">Contact Name</label>
+          <label class="field-label">Site Contact Name</label>
           <input type="text" id="contactName" placeholder="Full name" oninput="updateProgress()">
         </div>
         <div class="field-group">
@@ -962,9 +962,10 @@ async function createClientRecord(d, folderId) {
 
 async function uploadAndSend() {
   const d = collectData();
-  if (!d.companyName.trim()) { showToast('⚠️ Company name required'); return; }
+  if (!d.billingEntity || !d.billingEntity.trim()) { showToast('⚠️ Customer Billing Entity required'); return; }
+  if (!d.suburb || !d.suburb.trim()) { showToast('⚠️ Suburb required'); return; }
+  if (!d.state) { showToast('⚠️ State required'); return; }
   if (!d.prospectDate) { showToast('⚠️ Date required'); return; }
-  if (!d.contactName.trim()) { showToast('⚠️ Contact name required'); return; }
   if (!d.bdmName) { showToast('⚠️ Please select your name'); return; }
 
   showToast('⏳ Generating PDF...');
