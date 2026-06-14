@@ -291,6 +291,21 @@
     </div>
   </div>
 
+  <!-- QUICK SUBMIT AFTER SECTION 1 -->
+  <div style="background:var(--purple-pale);border:2px solid var(--purple-light);border-radius:12px;padding:16px;margin-bottom:8px;">
+    <div style="font-size:12px;font-weight:600;color:var(--purple-dark);margin-bottom:10px;">
+      ✅ Client details complete — ready to create record
+    </div>
+    <button onclick="uploadAndSend()"
+      style="width:100%;padding:14px;background:var(--purple-dark);color:white;border:none;border-radius:10px;
+        font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;letter-spacing:0.3px;">
+      ☁️ Save &amp; Submit — Create Client Record
+    </button>
+    <div style="font-size:11px;color:var(--gray-mid);margin-top:8px;text-align:center;">
+      Or continue below to add opportunity and conversation details
+    </div>
+  </div>
+
   <div style="display:flex;align-items:center;gap:12px;margin:4px 0 8px;">
     <div style="flex:1;height:1.5px;background:var(--gray-light);"></div>
     <span style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--gray-mid);white-space:nowrap;">Optional sections below</span>
@@ -367,7 +382,7 @@
       <div class="field-row">
         <div class="field-group">
           <label class="field-label">Current Supplier</label>
-          <input type="text" id="currentSupplier" placeholder="e.g. Caltex, Puma, Shell, Unknown">
+          <input type="text" id="currentSupplier" placeholder="e.g. Ecoblue, Ausblue, Unknown">
         </div>
         <div class="field-group">
           <label class="field-label">Estimated Volume</label>
@@ -447,9 +462,10 @@
 </div>
 
 <!-- STICKY FOOTER -->
-<div class="sticky-footer" style="grid-template-columns:1fr 1fr;">
+<div class="sticky-footer">
   <button class="btn btn-clear" onclick="confirmClear()">🗑️ Clear</button>
-  <button class="btn btn-submit" onclick="uploadAndSend()">☁️ Submit Prospect</button>
+  <button class="btn btn-dl" onclick="downloadPDF()">⬇️ Download</button>
+  <button class="btn btn-submit" onclick="uploadAndSend()">☁️ Submit</button>
 </div>
 
 <div class="modal-overlay" id="modal">
@@ -741,6 +757,22 @@ function sendCalendarInvite(d) {
     setTimeout(() => URL.revokeObjectURL(url), 10000);
   } catch(e) {
     console.warn('Calendar invite failed:', e);
+  }
+}
+
+// =====================================================================
+// DOWNLOAD PDF TO DEVICE
+// =====================================================================
+async function downloadPDF() {
+  showToast('⏳ Generating PDF...');
+  try {
+    const doc = await generatePDF(true);
+    const d   = collectData();
+    const name = `BioBlue_Prospect_${(d.companyName||'Draft').replace(/\s+/g,'_')}_${d.prospectDate||'undated'}.pdf`;
+    doc.save(name);
+    showToast('📄 PDF downloaded!');
+  } catch(e) {
+    showToast('❌ ' + e.message);
   }
 }
 
