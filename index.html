@@ -760,6 +760,58 @@ function sendCalendarInvite(d) {
   }
 }
 
+
+// =====================================================================
+// DUPLICATE CHECK — guards against same Generated Site Name
+// =====================================================================
+function normaliseSiteName(s) {
+  return (s || '')
+    .toLowerCase()
+    .replace(/pty\.?\s*ltd\.?/g, '')   // drop Pty Ltd
+    .replace(/[^a-z0-9]/g, '')           // strip punctuation, spaces, dashes
+    .trim();
+}
+
+async function checkDuplicateSiteName(generatedName) {
+  // Returns {isDupe, existingName, existingId} — reads the live client sheet
+  try {
+    // Get root folder
+    const fr = await fetch(
+      `https://www.googleapis.com/drive/v3/files?q=name='${GDRIVE_FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false&fields=files(id)`,
+      { headers: { Authorization: `Bearer ${gdriveToken}` } }
+    );
+    const fd = await fr.json();
+    if (!fd.files || !fd.files.length) return { isDupe:false };
+    const rootId = fd.files[0].id;
+
+    const sheetId = await getAdminSheetId(rootId);
+    if (!sheetId) return { isDupe:false };
+
+    const dl = await fetch(`https://www.googleapis.com/drive/v3/files/${sheetId}?alt=media`,
+      { headers: { Authorization: `Bearer ${gdriveToken}` } });
+    const ab = await dl.arrayBuffer();
+    const wb = XLSX.read(new Uint8Array(ab), { type:'array' });
+    const ws = wb.Sheets['Client Records'];
+    const rows = XLSX.utils.sheet_to_json(ws, { header:1 });
+    const hdrs = rows[0] || [];
+    const nameCol = hdrs.indexOf('Site Name');
+    const idCol   = hdrs.indexOf('Client ID');
+    if (nameCol === -1) return { isDupe:false };
+
+    const target = normaliseSiteName(generatedName);
+    for (let i = 1; i < rows.length; i++) {
+      const existing = rows[i][nameCol];
+      if (existing && normaliseSiteName(existing) === target) {
+        return { isDupe:true, existingName: existing, existingId: rows[i][idCol] || '' };
+      }
+    }
+    return { isDupe:false };
+  } catch(e) {
+    console.warn('Duplicate check failed (allowing submit):', e.message);
+    return { isDupe:false }; // fail-open — never block on a check error
+  }
+}
+
 // =====================================================================
 // DOWNLOAD PDF TO DEVICE
 // =====================================================================
@@ -966,6 +1018,28 @@ async function uploadAndSend() {
   if (!d.prospectDate) { showToast('⚠️ Date required'); return; }
   if (!d.bdmName) { showToast('⚠️ Please select your name'); return; }
 
+  // ── DUPLICATE CHECK (skip if updating an existing client) ──
+  const _isUpdate = new URLSearchParams(window.location.search).get('mode') === 'update';
+  if (!_isUpdate && d.generatedSiteName) {
+    showToast('🔍 Checking for duplicates...');
+    try {
+      await getDriveToken();
+      const dupe = await checkDuplicateSiteName(d.generatedSiteName);
+      if (dupe.isDupe) {
+        const proceed = confirm(
+          '⚠️ POSSIBLE DUPLICATE\n\n' +
+          'A client with this site name already exists:\n' +
+          '"' + dupe.existingName + '"' + (dupe.existingId ? '  (' + dupe.existingId + ')' : '') + '\n\n' +
+          'This is usually a sign the site is already in the system.\n\n' +
+          'Tap Cancel to go back and check, or OK to create it anyway.'
+        );
+        if (!proceed) { showToast('Cancelled — no duplicate created'); return; }
+      }
+    } catch(e) {
+      console.warn('Duplicate pre-check skipped:', e.message);
+    }
+  }
+
   showToast('⏳ Generating PDF...');
   const pdfDoc = await generatePDF(true);
   const pdfBlob = pdfDoc.output('blob');
@@ -1078,7 +1152,7 @@ async function loadClientFromURL() {
 
   if (banner) {
     banner.style.display = 'flex';
-    document.getElementById('bannerClientId').textContent = '';  // BB-XXXX kept internal, not displayed
+    document.getElementById('bannerClientId').textContent = 'Ref: ' + clientId;  // discreet reference
   }
 
   // Get Drive token
