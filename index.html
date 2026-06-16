@@ -153,6 +153,21 @@
     </a>
   </div>
 
+  <!-- UPDATE MODE BANNER -->
+  <div id="updateModeBanner" style="display:none;align-items:center;gap:12px;
+      background:#fef3c7;border:2px solid #d97706;
+      border-radius:10px;padding:14px 16px;margin:16px 16px 0;flex-wrap:wrap;">
+    <div style="font-size:24px;">💬</div>
+    <div style="flex:1;">
+      <div style="font-size:11px;font-weight:700;color:#92400e;text-transform:uppercase;letter-spacing:0.5px;">Update Mode — Log Conversation</div>
+      <div style="font-size:13px;font-weight:600;color:#78350f;">Add notes below — no new PDF will be created. The note is timestamped and appended to the client record in Drive.</div>
+    </div>
+    <a href="https://michaelhodnett2022-coder.github.io/bioblue-field-tools" style="font-size:11px;font-weight:600;color:#92400e;text-decoration:none;
+        background:white;border:1.5px solid #d97706;border-radius:6px;padding:5px 10px;white-space:nowrap;">
+      ← Back
+    </a>
+  </div>
+
 
   <!-- SECTION 1: CLIENT DETAILS — MANDATORY -->
   <div class="section-card">
@@ -214,6 +229,7 @@
               <option>Mine</option>
               <option>Port</option>
               <option>Terminal</option>
+              <option>Service Station</option>
               <option>Office</option>
               <option>Other</option>
             </select>
@@ -292,11 +308,11 @@
   </div>
 
   <!-- QUICK SUBMIT AFTER SECTION 1 -->
-  <div style="background:var(--purple-pale);border:2px solid var(--purple-light);border-radius:12px;padding:16px;margin-bottom:8px;">
+  <div id="quickSubmitBlock" style="background:var(--purple-pale);border:2px solid var(--purple-light);border-radius:12px;padding:16px;margin-bottom:8px;">
     <div style="font-size:12px;font-weight:600;color:var(--purple-dark);margin-bottom:10px;">
       ✅ Client details complete — ready to create record
     </div>
-    <button onclick="uploadAndSend()"
+    <button onclick="uploadAndSend()" data-submit-btn
       style="width:100%;padding:14px;background:var(--purple-dark);color:white;border:none;border-radius:10px;
         font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;letter-spacing:0.3px;">
       ☁️ Save &amp; Submit — Create Client Record
@@ -465,7 +481,7 @@
 <div class="sticky-footer">
   <button class="btn btn-clear" onclick="confirmClear()">🗑️ Clear</button>
   <button class="btn btn-dl" onclick="downloadPDF()">⬇️ Download</button>
-  <button class="btn btn-submit" onclick="uploadAndSend()">☁️ Submit</button>
+  <button class="btn btn-submit" onclick="uploadAndSend()" data-submit-btn>☁️ Submit</button>
 </div>
 
 <div class="modal-overlay" id="modal">
@@ -1010,17 +1026,125 @@ async function createClientRecord(d, folderId) {
 
 // PDF removed from Prospect/Client form — data captured in client record
 
+// =====================================================================
+// CONVERSATION LOG — append timestamped note (update mode only, no PDF)
+// =====================================================================
+async function appendConversationNote(d) {
+  const clientId = new URLSearchParams(window.location.search).get('client');
+  if (!clientId) { showToast('⚠️ No client ID in URL — cannot log note'); return; }
+
+  showToast('☁️ Connecting to Google...');
+  try {
+    await getDriveToken();
+    const fr = await fetch(
+      `https://www.googleapis.com/drive/v3/files?q=name='BioBlue Audits' and mimeType='application/vnd.google-apps.folder' and trashed=false&fields=files(id)`,
+      { headers: { Authorization: `Bearer ${gdriveToken}` } }
+    );
+    const fd = await fr.json();
+    if (!fd.files || !fd.files.length) { showToast('⚠️ BioBlue Audits folder not found'); return; }
+
+    const fileId = await getAdminSheetId(fd.files[0].id);
+    if (!fileId) { showToast('⚠️ Could not access client records'); return; }
+
+    showToast('📊 Loading client record...');
+    const dl = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, { headers: { Authorization: `Bearer ${gdriveToken}` } });
+    const ab = await dl.arrayBuffer();
+    const wb = XLSX.read(new Uint8Array(ab), { type: 'array' });
+
+    const ws   = wb.Sheets['Client Records'];
+    const rows = XLSX.utils.sheet_to_json(ws, { header: 1 });
+    const hdrs = rows[0] || [];
+    const idCol   = hdrs.indexOf('Client ID');
+    const nameCol = hdrs.indexOf('Billing Entity');
+    const siteCol = hdrs.indexOf('Site Name');
+    const notesCol = hdrs.indexOf('Notes Log');
+
+    const rowIdx = rows.slice(1).findIndex(r => (r[idCol]||'').toString() === clientId);
+    const clientRow = rowIdx > -1 ? rows[rowIdx + 1] : [];
+    const billingName = (clientRow && clientRow[nameCol]) ? clientRow[nameCol].toString() : '';
+    const siteName    = (clientRow && clientRow[siteCol])  ? clientRow[siteCol].toString()  : '';
+
+    // Build timestamped note
+    const timestamp = new Date().toLocaleString('en-AU');
+    const noteParts = [ d.convNotes.trim() ];
+    if (d.productInterest) noteParts.push(`Interest: ${d.productInterest}`);
+    if (d.currentSupplier) noteParts.push(`Supplier: ${d.currentSupplier}`);
+    if (d.estVolume)       noteParts.push(`Est. Vol: ${d.estVolume}`);
+    if (d.followupDate)    noteParts.push(`Follow-up: ${d.followupDate}${d.followupAction ? ' — ' + d.followupAction : ''}`);
+    const noteText = noteParts.join(' | ');
+
+    // Append to Notes Log tab
+    const nws = wb.Sheets['Notes Log'];
+    if (nws) {
+      const nr = XLSX.utils.sheet_to_json(nws, { header: 1 });
+      nr.push([clientId, billingName, siteName, timestamp, 'Update', d.bdmName, noteText]);
+      wb.Sheets['Notes Log'] = XLSX.utils.aoa_to_sheet(nr);
+    }
+
+    // Append to Notes Log column in Client Records row
+    if (rowIdx > -1 && notesCol > -1) {
+      const existing = (rows[rowIdx + 1][notesCol] || '').toString();
+      rows[rowIdx + 1][notesCol] = existing
+        ? existing + '\n\n[Update — ' + timestamp + ', ' + d.bdmName + ']\n' + noteText
+        : '[Update — ' + timestamp + ', ' + d.bdmName + ']\n' + noteText;
+      wb.Sheets['Client Records'] = XLSX.utils.aoa_to_sheet(rows);
+    }
+
+    // Write workbook back
+    showToast('☁️ Saving to Drive...');
+    const out  = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    const blob = new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const form = new FormData();
+    form.append('metadata', new Blob([JSON.stringify({})], { type: 'application/json' }));
+    form.append('file', blob, CLIENT_RECORDS_NAME);
+    await fetch(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=multipart`, { method: 'PATCH', headers: { Authorization: `Bearer ${gdriveToken}` }, body: form });
+
+    // Send calendar invite if follow-up date set
+    if (d.followupDate) {
+      showToast('📅 Sending calendar invite...');
+      sendCalendarInvite(d);
+    }
+
+    document.getElementById('modalMsg').textContent =
+      `✅ Conversation log updated!\n\n🏢 ${billingName || clientId}\n🕐 ${timestamp}\n📝 ${d.bdmName}\n\n${d.convNotes.trim()}` +
+      (d.followupDate ? `\n\n📅 Follow-up: ${d.followupDate}${d.followupAction ? ' — ' + d.followupAction : ''}` : '');
+    document.getElementById('modal').classList.add('active');
+    showToast('✅ Note saved to Drive!');
+
+  } catch(e) {
+    gdriveToken = null;
+    showToast('⚠️ Save failed: ' + e.message);
+    document.getElementById('modalMsg').textContent = '⚠️ Note save failed:\n' + e.message + '\n\nPlease try again or copy notes manually.';
+    document.getElementById('modal').classList.add('active');
+  }
+}
+
 async function uploadAndSend() {
   const d = collectData();
+  if (!d.bdmName) { showToast('⚠️ Please select your name'); return; }
+
+  // ── UPDATE MODE — append conversation note, no PDF ──
+  const _isUpdate = new URLSearchParams(window.location.search).get('mode') === 'update';
+  if (_isUpdate) {
+    if (!d.convNotes || !d.convNotes.trim()) {
+      showToast('⚠️ Please enter conversation notes before saving');
+      // Scroll to the conversation section
+      const convEl = document.getElementById('convNotes');
+      if (convEl) { const s = document.getElementById('s4'); if(s && s.classList.contains('collapsed')) toggleSection('s4'); setTimeout(() => convEl.scrollIntoView({ behavior:'smooth', block:'center' }), 200); }
+      return;
+    }
+    await appendConversationNote(d);
+    return;
+  }
+
   if (!d.billingEntity || !d.billingEntity.trim()) { showToast('⚠️ Customer Billing Entity required'); return; }
   if (!d.suburb || !d.suburb.trim()) { showToast('⚠️ Suburb required'); return; }
   if (!d.state) { showToast('⚠️ State required'); return; }
   if (!d.prospectDate) { showToast('⚠️ Date required'); return; }
-  if (!d.bdmName) { showToast('⚠️ Please select your name'); return; }
 
   // ── DUPLICATE CHECK (skip if updating an existing client) ──
-  const _isUpdate = new URLSearchParams(window.location.search).get('mode') === 'update';
-  if (!_isUpdate && d.generatedSiteName) {
+  const _isUpdateCheck = false; // already handled above
+  if (!_isUpdateCheck && d.generatedSiteName) {
     showToast('🔍 Checking for duplicates...');
     try {
       await getDriveToken();
@@ -1134,6 +1258,31 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('bdmNameTop').value = 'Michael Hodnett';
   autoFill('Michael Hodnett');
   updateProgress();
+
+  // ── UPDATE MODE UI ──
+  const _urlMode = new URLSearchParams(window.location.search).get('mode');
+  if (_urlMode === 'update') {
+    // Inject update mode banner
+    const banner = document.getElementById('updateModeBanner');
+    if (banner) banner.style.display = 'flex';
+    // Collapse sections that aren't relevant to a quick note update
+    ['s1','s2','s3'].forEach(id => {
+      const el = document.getElementById(id);
+      const tg = document.getElementById('toggle-' + id);
+      if (el && !el.classList.contains('collapsed')) { el.classList.add('collapsed'); if(tg) tg.textContent='▶'; }
+    });
+    // Open conversation section
+    const s4 = document.getElementById('s4');
+    const t4 = document.getElementById('toggle-s4');
+    if (s4) { s4.classList.remove('collapsed'); if(t4) t4.textContent='▼'; }
+    // Update submit button labels
+    document.querySelectorAll('[data-submit-btn]').forEach(btn => {
+      btn.textContent = '💬 Save Conversation Note';
+    });
+    // Hide quick-submit block (it's replaced by the update banner)
+    const quickSubmit = document.getElementById('quickSubmitBlock');
+    if (quickSubmit) quickSubmit.style.display = 'none';
+  }
 });
 
 // =====================================================================
