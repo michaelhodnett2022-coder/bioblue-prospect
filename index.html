@@ -87,6 +87,15 @@
   .btn-clear { background:white;color:var(--red);border:2px solid var(--red)!important; }
   .btn-dl { background:white;color:var(--purple-dark);border:2px solid var(--purple-dark)!important; }
   .btn-submit { background:var(--purple-dark);color:white; }
+  .contact-card { border:1.5px solid var(--gray-light);border-radius:10px;overflow:hidden;margin-bottom:12px; }
+  .contact-card-hdr { background:var(--purple-pale);border-bottom:1.5px solid var(--purple-light);padding:10px 14px;display:flex;align-items:center;gap:8px; }
+  .contact-card-hdr span { font-size:11px;font-weight:700;color:var(--purple-dark);text-transform:uppercase;letter-spacing:0.5px; }
+  .contact-card-body { padding:14px 14px 4px; }
+  .same-as-wrap { display:flex;align-items:center;gap:8px;background:var(--gray-pale);border:1px solid var(--gray-light);border-radius:7px;padding:7px 10px;margin-bottom:10px; }
+  .same-as-wrap label { font-size:11px;font-weight:600;color:var(--gray-mid);white-space:nowrap; }
+  .same-as-wrap select { flex:1;font-size:12px;padding:4px 8px;border-radius:5px; }
+  .linked-badge { display:none;font-size:10px;font-weight:600;color:var(--purple-dark);background:var(--purple-pale);border:1px solid var(--purple-light);border-radius:20px;padding:2px 10px;margin-left:4px; }
+  input.linked { background:var(--purple-pale)!important;border-color:var(--purple-light)!important;color:var(--purple-dark)!important; }
   .btn-submit:hover { background:var(--purple); }
 
   .modal-overlay { display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:200;align-items:center;justify-content:center;padding:20px; }
@@ -168,6 +177,21 @@
     </a>
   </div>
 
+  <!-- SNAPSHOT RESTORE BANNER -->
+  <div id="snapshotBanner" style="display:none;align-items:center;gap:12px;
+      background:rgba(245,158,11,0.1);border:1.5px solid rgba(245,158,11,0.5);
+      border-radius:10px;padding:14px 16px;margin:12px 16px 0;flex-wrap:wrap;">
+    <div style="font-size:22px;">📋</div>
+    <div style="flex:1;">
+      <div style="font-size:13px;font-weight:700;color:#92400e;">Previous submission found</div>
+      <div style="font-size:11px;color:#78350f;">Saved: <span data-snap-date></span> — tap Restore to reload all fields</div>
+    </div>
+    <button onclick="restoreSnapshot()" style="background:#d97706;color:white;border:none;border-radius:8px;
+        padding:9px 16px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;">
+      ↩️ Restore
+    </button>
+  </div>
+
 
   <!-- SECTION 1: CLIENT DETAILS — MANDATORY -->
   <div class="section-card">
@@ -221,17 +245,19 @@
             <select id="descriptor" onchange="generateSiteName();updateProgress()">
               <option value="">Select...</option>
               <option>Depot</option>
+              <option>Mine</option>
+              <option>Office</option>
+              <option>Other</option>
+              <option>Outside Payment Terminal (Unmanned)</option>
+              <option>Port</option>
+              <option>Reseller Customer Site</option>
+              <option>Service Station</option>
+              <option>Site</option>
+              <option>Store</option>
+              <option>Terminal</option>
               <option>Warehouse</option>
               <option>Workshop</option>
               <option>Yard</option>
-              <option>Store</option>
-              <option>Site</option>
-              <option>Mine</option>
-              <option>Port</option>
-              <option>Terminal</option>
-              <option>Service Station</option>
-              <option>Office</option>
-              <option>Other</option>
             </select>
           </div>
           <div class="field-group">
@@ -280,30 +306,6 @@
         </div>
       </div>
 
-      <!-- SITE CONTACT — OPTIONAL -->
-      <div style="border-top:1px solid var(--gray-light);margin:16px 0 12px;padding-top:14px;">
-        <div class="field-row">
-          <div class="field-group">
-            <label class="field-label">Contact Name</label>
-            <input type="text" id="s1contactName" placeholder="Full name">
-          </div>
-          <div class="field-group">
-            <label class="field-label">Title / Role</label>
-            <input type="text" id="s1contactRole" placeholder="">
-          </div>
-        </div>
-        <div class="field-row">
-          <div class="field-group">
-            <label class="field-label">Mobile</label>
-            <input type="tel" id="s1contactMobile" placeholder="04XX XXX XXX">
-          </div>
-          <div class="field-group">
-            <label class="field-label">Email</label>
-            <input type="email" id="s1contactEmail" placeholder="contact@company.com">
-          </div>
-        </div>
-      </div>
-
     </div>
   </div>
 
@@ -328,48 +330,205 @@
     <div style="flex:1;height:1.5px;background:var(--gray-light);"></div>
   </div>
 
-  <!-- SECTION 2: SITE CONTACT -->
+  <!-- SECTION 2: CONTACTS -->
   <div class="section-card">
     <div class="section-header" onclick="toggleSection('s2')">
-      <div class="section-header-icon">👤</div>
+      <div class="section-header-icon">👥</div>
       <div class="section-header-text">
-        <h2>2. Site Contact</h2>
-        <p>Key person at this site</p>
+        <h2>2. Contacts <span style="font-size:10px;font-weight:400;opacity:0.7;">(optional — all fields)</span></h2>
+        <p>Business contact, KDM, logistics, admin and other</p>
       </div>
       <div class="section-toggle" id="toggle-s2">▶</div>
     </div>
     <div class="section-body collapsed" id="s2">
-      <!-- AS ABOVE CHECKBOX -->
-      <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--purple-pale);border:1.5px solid var(--purple-light);border-radius:8px;margin-bottom:12px;cursor:pointer;" onclick="document.getElementById('asAboveChk').click()">
-        <input type="checkbox" id="asAboveChk" autocomplete="off"
-          onchange="applyAsAbove(this.checked)"
-          style="width:18px;height:18px;accent-color:var(--purple);cursor:pointer;flex-shrink:0;">
-        <div>
-          <div style="font-size:13px;font-weight:700;color:var(--purple-dark);">Same as above contact details</div>
-          <div style="font-size:11px;color:var(--gray-mid);">Tick to copy contact details from Section 1</div>
+
+      <!-- CONTACT 1: BUSINESS / SITE CONTACT -->
+      <div class="contact-card">
+        <div class="contact-card-hdr">
+          <span>Contact 1 — Business / Site Contact</span>
+        </div>
+        <div class="contact-card-body">
+          <div class="field-row">
+            <div class="field-group">
+              <label class="field-label">Full Name</label>
+              <input type="text" id="c1Name" placeholder="Full name">
+            </div>
+            <div class="field-group">
+              <label class="field-label">Title / Role</label>
+              <input type="text" id="c1Role" placeholder="e.g. Site Manager">
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-group">
+              <label class="field-label">Email</label>
+              <input type="email" id="c1Email" placeholder="name@company.com.au">
+            </div>
+            <div class="field-group">
+              <label class="field-label">Phone</label>
+              <input type="tel" id="c1Phone" placeholder="04XX XXX XXX">
+            </div>
+          </div>
         </div>
       </div>
 
-      <div class="field-row">
-        <div class="field-group">
-          <label class="field-label">Site Contact Name</label>
-          <input type="text" id="contactName" placeholder="Full name" oninput="updateProgress()">
+      <!-- CONTACT 2: KEY DECISION MAKER -->
+      <div class="contact-card">
+        <div class="contact-card-hdr">
+          <span>Contact 2 — Key Decision Maker</span>
+          <span class="linked-badge" id="c2LinkedBadge"></span>
         </div>
-        <div class="field-group">
-          <label class="field-label">Title / Role</label>
-          <input type="text" id="contactRole" placeholder="">
+        <div class="contact-card-body">
+          <div class="same-as-wrap">
+            <label>Same as:</label>
+            <select id="c2SameAs" onchange="applySameAs(2,this.value)">
+              <option value="">— Fill independently —</option>
+              <option value="1">Contact 1 — Business / Site Contact</option>
+            </select>
+          </div>
+          <div class="field-row">
+            <div class="field-group">
+              <label class="field-label">Full Name</label>
+              <input type="text" id="c2Name" placeholder="Full name">
+            </div>
+            <div class="field-group">
+              <label class="field-label">Title / Role</label>
+              <input type="text" id="c2Role" placeholder="e.g. General Manager">
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-group">
+              <label class="field-label">Email</label>
+              <input type="email" id="c2Email" placeholder="name@company.com.au">
+            </div>
+            <div class="field-group">
+              <label class="field-label">Phone</label>
+              <input type="tel" id="c2Phone" placeholder="04XX XXX XXX">
+            </div>
+          </div>
         </div>
       </div>
-      <div class="field-row">
-        <div class="field-group">
-          <label class="field-label">Mobile</label>
-          <input type="tel" id="contactMobile" placeholder="04XX XXX XXX">
+
+      <!-- CONTACT 3: LOGISTICS -->
+      <div class="contact-card">
+        <div class="contact-card-hdr">
+          <span>Contact 3 — Logistics</span>
+          <span class="linked-badge" id="c3LinkedBadge"></span>
         </div>
-        <div class="field-group">
-          <label class="field-label">Email</label>
-          <input type="email" id="contactEmail" placeholder="contact@company.com">
+        <div class="contact-card-body">
+          <div class="same-as-wrap">
+            <label>Same as:</label>
+            <select id="c3SameAs" onchange="applySameAs(3,this.value)">
+              <option value="">— Fill independently —</option>
+              <option value="1">Contact 1 — Business / Site Contact</option>
+              <option value="2">Contact 2 — Key Decision Maker</option>
+            </select>
+          </div>
+          <div class="field-row">
+            <div class="field-group">
+              <label class="field-label">Full Name</label>
+              <input type="text" id="c3Name" placeholder="Full name">
+            </div>
+            <div class="field-group">
+              <label class="field-label">Title / Role</label>
+              <input type="text" id="c3Role" placeholder="e.g. Transport Manager">
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-group">
+              <label class="field-label">Email</label>
+              <input type="email" id="c3Email" placeholder="name@company.com.au">
+            </div>
+            <div class="field-group">
+              <label class="field-label">Phone</label>
+              <input type="tel" id="c3Phone" placeholder="04XX XXX XXX">
+            </div>
+          </div>
         </div>
       </div>
+
+      <!-- CONTACT 4: ADMIN / INVOICING -->
+      <div class="contact-card">
+        <div class="contact-card-hdr">
+          <span>Contact 4 — Admin / Invoicing</span>
+          <span class="linked-badge" id="c4LinkedBadge"></span>
+        </div>
+        <div class="contact-card-body">
+          <div class="same-as-wrap">
+            <label>Same as:</label>
+            <select id="c4SameAs" onchange="applySameAs(4,this.value)">
+              <option value="">— Fill independently —</option>
+              <option value="1">Contact 1 — Business / Site Contact</option>
+              <option value="2">Contact 2 — Key Decision Maker</option>
+              <option value="3">Contact 3 — Logistics</option>
+            </select>
+          </div>
+          <div class="field-row">
+            <div class="field-group">
+              <label class="field-label">Full Name</label>
+              <input type="text" id="c4Name" placeholder="Full name">
+            </div>
+            <div class="field-group">
+              <label class="field-label">Title / Role</label>
+              <input type="text" id="c4Role" placeholder="e.g. Accounts Payable">
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-group">
+              <label class="field-label">Email</label>
+              <input type="email" id="c4Email" placeholder="accounts@company.com.au">
+            </div>
+            <div class="field-group">
+              <label class="field-label">Phone</label>
+              <input type="tel" id="c4Phone" placeholder="04XX XXX XXX">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CONTACT 5: OTHER -->
+      <div class="contact-card">
+        <div class="contact-card-hdr">
+          <span>Contact 5 — Other</span>
+          <span class="linked-badge" id="c5LinkedBadge"></span>
+        </div>
+        <div class="contact-card-body">
+          <div class="same-as-wrap">
+            <label>Same as:</label>
+            <select id="c5SameAs" onchange="applySameAs(5,this.value)">
+              <option value="">— Fill independently —</option>
+              <option value="1">Contact 1 — Business / Site Contact</option>
+              <option value="2">Contact 2 — Key Decision Maker</option>
+              <option value="3">Contact 3 — Logistics</option>
+              <option value="4">Contact 4 — Admin / Invoicing</option>
+            </select>
+          </div>
+          <div class="field-group" style="margin-bottom:10px;">
+            <label class="field-label">Contact Type / Role Description</label>
+            <input type="text" id="c5Label" placeholder="e.g. Safety Officer, Operations Manager">
+          </div>
+          <div class="field-row">
+            <div class="field-group">
+              <label class="field-label">Full Name</label>
+              <input type="text" id="c5Name" placeholder="Full name">
+            </div>
+            <div class="field-group">
+              <label class="field-label">Title / Role</label>
+              <input type="text" id="c5Role" placeholder="e.g. HSE Manager">
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-group">
+              <label class="field-label">Email</label>
+              <input type="email" id="c5Email" placeholder="name@company.com.au">
+            </div>
+            <div class="field-group">
+              <label class="field-label">Phone</label>
+              <input type="tel" id="c5Phone" placeholder="04XX XXX XXX">
+            </div>
+          </div>
+        </div>
+      </div>
+
     </div>
   </div>
 
@@ -525,33 +684,39 @@ function setInterest(val) {
 }
 
 // =====================================================================
-// AS ABOVE — copy Section 1 contact to Section 2
+// CONTACTS — SAME AS LINKING (Contacts 2–5)
 // =====================================================================
-function applyAsAbove(checked) {
-  const fields = [
-    ['s1contactName',   'contactName'],
-    ['s1contactRole',   'contactRole'],
-    ['s1contactMobile', 'contactMobile'],
-    ['s1contactEmail',  'contactEmail'],
-  ];
-  fields.forEach(([src, dst]) => {
-    const srcEl = document.getElementById(src);
-    const dstEl = document.getElementById(dst);
-    if (!srcEl || !dstEl) return;
-    if (checked) {
-      dstEl.value    = srcEl.value;
-      dstEl.readOnly = true;
-      dstEl.style.background   = 'var(--purple-pale)';
-      dstEl.style.borderColor  = 'var(--purple-light)';
-      dstEl.style.color        = 'var(--purple-dark)';
-    } else {
-      dstEl.readOnly = false;
-      dstEl.style.background   = '';
-      dstEl.style.borderColor  = '';
-      dstEl.style.color        = '';
+const CONTACT_LABELS = {
+  1:'Business / Site Contact', 2:'Key Decision Maker',
+  3:'Logistics', 4:'Admin / Invoicing', 5:'Other'
+};
+
+function applySameAs(targetNum, sourceNum) {
+  const fields = ['Name','Role','Email','Phone'];
+  // Always clear link state first
+  fields.forEach(f => {
+    const el = document.getElementById(`c${targetNum}${f}`);
+    if (el) { el.readOnly=false; el.classList.remove('linked'); el.value=''; }
+  });
+  const badge = document.getElementById(`c${targetNum}LinkedBadge`);
+  if (badge) badge.style.display = 'none';
+
+  if (!sourceNum) return; // fill independently
+
+  const src = parseInt(sourceNum);
+  fields.forEach(f => {
+    const srcEl = document.getElementById(`c${src}${f}`);
+    const tgtEl = document.getElementById(`c${targetNum}${f}`);
+    if (srcEl && tgtEl) {
+      tgtEl.value = srcEl.value;
+      tgtEl.readOnly = true;
+      tgtEl.classList.add('linked');
     }
   });
-  updateProgress();
+  if (badge) {
+    badge.textContent = `Linked to Contact ${src} — ${CONTACT_LABELS[src]}`;
+    badge.style.display = 'inline-flex';
+  }
 }
 
 // =====================================================================
@@ -689,6 +854,12 @@ function updateProgress() {
 // =====================================================================
 function collectData() {
   const g = id => document.getElementById(id)?.value || '';
+  const contact = n => ({
+    name:  g(`c${n}Name`),
+    role:  g(`c${n}Role`),
+    email: g(`c${n}Email`),
+    phone: g(`c${n}Phone`),
+  });
   return {
     companyName:      g('billingEntity')||g('companyName'),
     billingEntity:    g('billingEntity'),
@@ -700,14 +871,17 @@ function collectData() {
     suburb:           g('suburb'),
     state:            g('state'),
     postcode:         g('postcode'),
-    primaryContactName:  g('s1contactName'),
-    primaryContactRole:  g('s1contactRole'),
-    primaryContactMobile:g('s1contactMobile'),
-    primaryContactEmail: g('s1contactEmail'),
-    contactName:         g('contactName'),
-    contactRole:         g('contactRole'),
-    contactMobile:       g('contactMobile'),
-    contactEmail:        g('contactEmail'),
+    // 5 structured contacts
+    c1: contact(1), // Business / Site Contact
+    c2: contact(2), // Key Decision Maker
+    c3: contact(3), // Logistics
+    c4: contact(4), // Admin / Invoicing
+    c5: { label:g('c5Label'), ...contact(5) }, // Other
+    // Backward compat aliases (used by PDF, VCF, ICS, email)
+    contactName:   g('c1Name'),
+    contactRole:   g('c1Role'),
+    contactMobile: g('c1Phone'),
+    contactEmail:  g('c1Email'),
     productInterest: productInterest,
     currentSupplier: g('currentSupplier'),
     estVolume:       g('estVolume'),
@@ -848,19 +1022,23 @@ async function downloadPDF() {
 // VCARD CONTACT
 // =====================================================================
 function generateVCard(d) {
-  if (!d.contactName) return;
-  var nameParts = d.contactName.split(' ');
+  if (!d.contactName && !d.c1?.name) return;
+  const vcfName   = d.c1?.name   || d.contactName;
+  const vcfRole   = d.c1?.role   || d.contactRole;
+  const vcfPhone  = d.c1?.phone  || d.contactMobile;
+  const vcfEmail  = d.c1?.email  || d.contactEmail;
+  var nameParts = vcfName.split(' ');
   var firstName = nameParts[0] || '';
   var lastName  = nameParts.slice(1).join(' ') || '';
   var lines = [
     'BEGIN:VCARD',
     'VERSION:3.0',
-    'FN:' + d.contactName,
+    'FN:' + vcfName,
     'N:' + lastName + ';' + firstName + ';;;',
-    d.companyName   ? 'ORG:'           + d.companyName   : '',
-    d.contactRole   ? 'TITLE:'         + d.contactRole   : '',
-    d.contactMobile ? 'TEL;TYPE=CELL:' + d.contactMobile : '',
-    d.contactEmail  ? 'EMAIL:'         + d.contactEmail  : '',
+    d.companyName ? 'ORG:' + d.companyName : '',
+    vcfRole       ? 'TITLE:' + vcfRole     : '',
+    vcfPhone      ? 'TEL;TYPE=CELL:' + vcfPhone : '',
+    vcfEmail      ? 'EMAIL:' + vcfEmail    : '',
     (d.siteAddress||d.suburb||d.state||d.postcode)
       ? ('ADR;TYPE=WORK:;;' + (d.siteAddress||'') + ';' + (d.suburb||'') + ';' + (d.state||'') + ';' + (d.postcode||'') + ';Australia')
       : '',
@@ -871,7 +1049,7 @@ function generateVCard(d) {
   var url  = URL.createObjectURL(blob);
   var a    = document.createElement('a');
   a.href   = url;
-  a.download = d.contactName.replace(/\s+/g, '_') + '.vcf';
+  a.download = vcfName.replace(/\s+/g, '_') + '.vcf';
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   setTimeout(function(){ URL.revokeObjectURL(url); }, 10000);
 }
@@ -909,8 +1087,8 @@ async function generatePDF(returnDoc=false) {
 
   // S2
   secHdr('2. SITE CONTACT');
-  twoRow('Contact Name',d.contactName,'Title / Role',d.contactRole);
-  twoRow('Mobile',d.contactMobile,'Email',d.contactEmail);
+  twoRow('Business Contact',d.c1?.name||d.contactName,'Title / Role',d.c1?.role||d.contactRole);
+  twoRow('Phone',d.c1?.phone||d.contactMobile,'Email',d.c1?.email||d.contactEmail);
 
   // S3
   secHdr('3. OPPORTUNITY');
@@ -986,15 +1164,42 @@ async function createClientRecord(d, folderId) {
   const set = (col,val) => { const i=headers.indexOf(col); if(i>-1) newRow[i]=val; };
   set('Client ID',     newId);
   set('Billing Entity',d.billingEntity||d.companyName);
-    set('Site Name',d.generatedSiteName||d.companyName);
+  set('Site Name',     d.generatedSiteName||d.companyName);
   set('Street Address',d.siteAddress);
   set('Suburb',        d.suburb);
   set('State',         d.state);
   set('Postcode',      d.postcode);
-  set('Contact Name',  d.contactName);
-  set('Contact Title', d.contactRole);
-  set('Contact Mobile',d.contactMobile);
-  set('Contact Email', d.contactEmail);
+  // Contact 1 — Business / Site Contact
+  set('Business Contact Name',  d.c1.name);
+  set('Business Contact Role',  d.c1.role);
+  set('Business Contact Email', d.c1.email);
+  set('Business Contact Phone', d.c1.phone);
+  // Contact 2 — Key Decision Maker
+  set('KDM Name',  d.c2.name);
+  set('KDM Role',  d.c2.role);
+  set('KDM Email', d.c2.email);
+  set('KDM Phone', d.c2.phone);
+  // Contact 3 — Logistics
+  set('Logistics Name',  d.c3.name);
+  set('Logistics Role',  d.c3.role);
+  set('Logistics Email', d.c3.email);
+  set('Logistics Phone', d.c3.phone);
+  // Contact 4 — Admin / Invoicing
+  set('Admin Contact Name',  d.c4.name);
+  set('Admin Contact Role',  d.c4.role);
+  set('Admin Contact Email', d.c4.email);
+  set('Admin Contact Phone', d.c4.phone);
+  // Contact 5 — Other
+  set('Other Contact Label', d.c5.label);
+  set('Other Contact Name',  d.c5.name);
+  set('Other Contact Role',  d.c5.role);
+  set('Other Contact Email', d.c5.email);
+  set('Other Contact Phone', d.c5.phone);
+  // Legacy aliases (backward compat for existing records)
+  set('Contact Name',  d.c1.name);
+  set('Contact Title', d.c1.role);
+  set('Contact Mobile',d.c1.phone);
+  set('Contact Email', d.c1.email);
   set('Prospect ✓',   '✓');
   set('Created Date',  new Date().toLocaleDateString('en-AU'));
   set('Created By',    d.bdmName);
@@ -1195,6 +1400,9 @@ async function uploadAndSend() {
       await saveClientFolderIdToRecord(folderId, newId, clientFolderId);
     }
 
+    // Save form snapshot for future reload/edit
+    await saveFormSnapshot(d, clientFolderId);
+
     // Send calendar invite if follow-up date set
     if (d.followupDate) {
       showToast('📅 Sending calendar invite...');
@@ -1231,15 +1439,24 @@ function confirmClear() {
 function clearAll() {
   ['billingEntity','siteLocationName','generatedSiteName','companyName','prospectDate',
    'siteAddress','suburb','postcode',
-   's1contactName','s1contactRole','s1contactMobile','s1contactEmail',
-   'contactName','contactRole','contactMobile','contactEmail',
+   'c1Name','c1Role','c1Email','c1Phone',
+   'c2Name','c2Role','c2Email','c2Phone',
+   'c3Name','c3Role','c3Email','c3Phone',
+   'c4Name','c4Role','c4Email','c4Phone',
+   'c5Label','c5Name','c5Role','c5Email','c5Phone',
    'currentSupplier','estVolume','convNotes',
    'followupDate','followupAction','bdmEmail'].forEach(id => {
-    const el = document.getElementById(id); if(el) el.value='';
+    const el = document.getElementById(id);
+    if (el) { el.value=''; el.readOnly=false; el.classList.remove('linked'); }
+  });
+  // Reset same-as dropdowns
+  [2,3,4,5].forEach(n => {
+    const sel = document.getElementById(`c${n}SameAs`); if(sel) sel.selectedIndex=0;
+    const badge = document.getElementById(`c${n}LinkedBadge`); if(badge) badge.style.display='none';
   });
   document.getElementById('state').selectedIndex = 0;
+  document.getElementById('descriptor').selectedIndex = 0;
   document.getElementById('bdmName').selectedIndex = 0;
-  const asAbove = document.getElementById('asAboveChk'); if(asAbove) { asAbove.checked = false; applyAsAbove(false); }
   setInterest('');
   productInterest = '';
   updateProgress();
@@ -1412,6 +1629,9 @@ async function fetchClientDetails(clientId) {
 
     if (typeof updateProgress === 'function') updateProgress();
     showToast('✅ Client details loaded — ' + (get('Billing Entity') || clientId));
+
+    // Check Drive for a saved snapshot of this form for this client
+    try { await checkForSnapshot(fd.files[0].id, clientId); } catch(e) { /* non-critical */ }
 
   } catch(e) {
     showToast('⚠️ Could not load client — tap to retry');
@@ -1612,6 +1832,133 @@ function showPrefillRetry(clientId) {
     btn.style.display = 'inline-block';
     btn.textContent = '\u21bb Tap to load client details';
   }
+}
+
+// =====================================================================
+// FORM SNAPSHOT — save/restore full form state from Drive JSON
+// =====================================================================
+const SNAPSHOT_FORM_TYPE = 'Prospect';
+let _snapshotFileId = null;
+
+async function saveFormSnapshot(d, clientFolderId) {
+  if (!gdriveToken || !clientFolderId) return;
+  try {
+    const clientId = new URLSearchParams(window.location.search).get('client');
+    if (!clientId) return;
+    const fileName = `BB_${SNAPSHOT_FORM_TYPE}_${clientId}.json`;
+    const snapshot = { ...d, _snapshotSavedAt: new Date().toISOString(), _clientId: clientId };
+    const blob = new Blob([JSON.stringify(snapshot, null, 2)], { type: 'application/json' });
+    const sr = await fetch(
+      `https://www.googleapis.com/drive/v3/files?q=name='${fileName}' and '${clientFolderId}' in parents and trashed=false&fields=files(id)`,
+      { headers: { Authorization: `Bearer ${gdriveToken}` } }
+    );
+    const sd = await sr.json();
+    const fm = new FormData();
+    if (sd.files && sd.files.length) {
+      fm.append('metadata', new Blob([JSON.stringify({})], { type: 'application/json' }));
+      fm.append('file', blob, fileName);
+      await fetch(`https://www.googleapis.com/upload/drive/v3/files/${sd.files[0].id}?uploadType=multipart`,
+        { method: 'PATCH', headers: { Authorization: `Bearer ${gdriveToken}` }, body: fm });
+    } else {
+      fm.append('metadata', new Blob([JSON.stringify({ name: fileName, parents: [clientFolderId] })], { type: 'application/json' }));
+      fm.append('file', blob, fileName);
+      await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',
+        { method: 'POST', headers: { Authorization: `Bearer ${gdriveToken}` }, body: fm });
+    }
+    console.log('✅ Prospect snapshot saved:', fileName);
+  } catch(e) { console.warn('Snapshot save failed:', e.message); }
+}
+
+async function checkForSnapshot(rootFolderId, clientId) {
+  const fileName = `BB_${SNAPSHOT_FORM_TYPE}_${clientId}.json`;
+  try {
+    const clientFolderId = await getClientFolderFromRecord(rootFolderId, clientId, '');
+    if (!clientFolderId) return;
+    const sr = await fetch(
+      `https://www.googleapis.com/drive/v3/files?q=name='${fileName}' and '${clientFolderId}' in parents and trashed=false&fields=files(id,modifiedTime)`,
+      { headers: { Authorization: `Bearer ${gdriveToken}` } }
+    );
+    const sd = await sr.json();
+    if (!sd.files || !sd.files.length) return;
+    _snapshotFileId = sd.files[0].id;
+    const modTime = new Date(sd.files[0].modifiedTime).toLocaleString('en-AU');
+    const banner = document.getElementById('snapshotBanner');
+    if (banner) {
+      const el = banner.querySelector('[data-snap-date]');
+      if (el) el.textContent = modTime;
+      banner.style.display = 'flex';
+    }
+  } catch(e) { console.warn('Snapshot check failed:', e.message); }
+}
+
+async function restoreSnapshot() {
+  if (!_snapshotFileId) { showToast('⚠️ No snapshot to restore'); return; }
+  showToast('⏳ Restoring previous submission...');
+  try {
+    const res = await fetch(`https://www.googleapis.com/drive/v3/files/${_snapshotFileId}?alt=media`,
+      { headers: { Authorization: `Bearer ${gdriveToken}` } });
+    if (!res.ok) throw new Error('Download failed');
+    const d = await res.json();
+    populateFromSnapshot(d);
+    const banner = document.getElementById('snapshotBanner');
+    if (banner) {
+      banner.style.background = 'rgba(0,135,90,0.1)';
+      banner.style.borderColor = 'rgba(0,135,90,0.4)';
+      banner.innerHTML = '<div style="font-size:13px;font-weight:700;color:#00875a;padding:4px 0;">✅ Previous submission restored — make your changes and resubmit</div>';
+    }
+    showToast('✅ Form restored — ready to edit');
+  } catch(e) { showToast('⚠️ Restore failed: ' + e.message); }
+}
+
+function populateFromSnapshot(d) {
+  const sv = (id, val) => { const el = document.getElementById(id); if (el && val !== undefined && val !== null) el.value = val; };
+  // Client details
+  sv('billingEntity',    d.billingEntity);
+  sv('siteLocationName', d.siteLocationName);
+  const descEl = document.getElementById('descriptor');
+  if (descEl && d.descriptor) descEl.value = d.descriptor;
+  const stateEl = document.getElementById('state');
+  if (stateEl && d.state) stateEl.value = d.state;
+  sv('suburb',      d.suburb);
+  sv('siteAddress', d.siteAddress);
+  sv('postcode',    d.postcode);
+  // Contact 1 — Business / Site Contact (fall back to legacy columns)
+  sv('c1Name',  d.c1?.name  || d['Business Contact Name']  || d.contactName);
+  sv('c1Role',  d.c1?.role  || d['Business Contact Role']  || d.contactRole);
+  sv('c1Email', d.c1?.email || d['Business Contact Email'] || d.contactEmail);
+  sv('c1Phone', d.c1?.phone || d['Business Contact Phone'] || d.contactMobile);
+  // Contact 2 — Key Decision Maker
+  sv('c2Name',  d.c2?.name  || d['KDM Name']);
+  sv('c2Role',  d.c2?.role  || d['KDM Role']);
+  sv('c2Email', d.c2?.email || d['KDM Email']);
+  sv('c2Phone', d.c2?.phone || d['KDM Phone']);
+  // Contact 3 — Logistics
+  sv('c3Name',  d.c3?.name  || d['Logistics Name']);
+  sv('c3Role',  d.c3?.role  || d['Logistics Role']);
+  sv('c3Email', d.c3?.email || d['Logistics Email']);
+  sv('c3Phone', d.c3?.phone || d['Logistics Phone']);
+  // Contact 4 — Admin / Invoicing
+  sv('c4Name',  d.c4?.name  || d['Admin Contact Name']);
+  sv('c4Role',  d.c4?.role  || d['Admin Contact Role']);
+  sv('c4Email', d.c4?.email || d['Admin Contact Email']);
+  sv('c4Phone', d.c4?.phone || d['Admin Contact Phone']);
+  // Contact 5 — Other
+  sv('c5Label', d.c5?.label || d['Other Contact Label']);
+  sv('c5Name',  d.c5?.name  || d['Other Contact Name']);
+  sv('c5Role',  d.c5?.role  || d['Other Contact Role']);
+  sv('c5Email', d.c5?.email || d['Other Contact Email']);
+  sv('c5Phone', d.c5?.phone || d['Other Contact Phone']);
+  // Opportunity
+  if (d.productInterest) setInterest(d.productInterest);
+  sv('currentSupplier', d.currentSupplier);
+  sv('estVolume',       d.estVolume);
+  // Conversation
+  sv('convNotes',      d.convNotes);
+  sv('followupDate',   d.followupDate);
+  sv('followupAction', d.followupAction);
+  // Regenerate site name from restored fields
+  if (typeof generateSiteName === 'function') generateSiteName();
+  updateProgress();
 }
 </script>
 </body>
