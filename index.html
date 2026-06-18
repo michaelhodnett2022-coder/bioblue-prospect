@@ -1010,7 +1010,7 @@ async function downloadPDF() {
   try {
     const doc = await generatePDF(true);
     const d   = collectData();
-    const name = `BioBlue_Prospect_${(d.companyName||'Draft').replace(/\s+/g,'_')}_${d.prospectDate||'undated'}.pdf`;
+    const name = ((d.generatedSiteName||d.companyName||'Draft').replace(/[^a-zA-Z0-9\s]/g,'').trim().replace(/\s+/g,'_'))+'.Client.pdf';
     doc.save(name);
     showToast('📄 PDF downloaded!');
   } catch(e) {
@@ -1058,6 +1058,55 @@ function generateVCard(d) {
 // =====================================================================
 // PDF
 // =====================================================================
+// =====================================================================
+// STANDARD PDF HEADER — shared layout across all forms
+// =====================================================================
+function drawStdHeader(doc, d, formLabel, MC, ML) {
+  const margin=15,pW=210,cW=pW-margin*2;
+  const NAVY=[0,52,102],BLUE=[0,85,165],GRAY=[108,117,125],BLK=[30,40,50];
+  doc.setFont('helvetica','bold');doc.setFontSize(13);doc.setTextColor(...NAVY);
+  doc.text('Bio',margin,9);
+  const bW=doc.getTextWidth('Bio');
+  doc.setTextColor(...BLUE);doc.text('Blue',margin+bW,9);
+  doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(...GRAY);
+  doc.text('  ·  '+formLabel,margin+bW+doc.getTextWidth('Blue'),9);
+  const dv=d.prospectDate||d.formDate||d.auditDate||d.assessDate||'';
+  if(dv){let ds=dv;try{ds=new Date(dv+'T12:00:00').toLocaleDateString('en-AU');}catch(e){}doc.text(ds,pW-margin,9,{align:'right'});}
+  doc.setDrawColor(...BLUE);doc.setLineWidth(0.4);doc.line(margin,11.5,pW-margin,11.5);
+  doc.setFillColor(...MC);doc.rect(margin,13,cW,14,'F');
+  doc.setFont('helvetica','normal');doc.setFontSize(5.5);doc.setTextColor(255,255,255);
+  doc.text(formLabel.toUpperCase(),margin+3,17.5);
+  const sn=(d.generatedSiteName||d.siteName||d.companyName||d.customerName||'').toUpperCase();
+  doc.setFont('helvetica','bold');doc.setFontSize(11);
+  doc.text(doc.splitTextToSize(sn,cW-8)[0],margin+3,24);
+  const by=28.5;doc.setFillColor(...ML);doc.rect(margin,by,cW,37,'F');
+  const bm=margin+3,hw=(cW-8)/2;
+  const lbl=(t,x,y)=>{doc.setFont('helvetica','normal');doc.setFontSize(5.5);doc.setTextColor(...MC);doc.text(t,x,y);};
+  const val=(t,x,y)=>{doc.setFont('helvetica','bold');doc.setFontSize(7.5);doc.setTextColor(...BLK);doc.text((t||'—').toString().substring(0,42),x,y);};
+  const divL=(y)=>{doc.setDrawColor(200,210,220);doc.setLineWidth(0.2);doc.line(margin+2,y,pW-margin-2,y);};
+  lbl('BILLING ENTITY',bm,by+3);val(d.billingEntity||d.customerName||d.companyName,bm,by+7);
+  lbl('DESCRIPTOR',bm+hw+4,by+3);val(d.descriptor||d._descriptor||'—',bm+hw+4,by+7);
+  divL(by+9.5);
+  lbl('SITE LOCATION / END USER',bm,by+12.5);val(d.siteLocationName||d._siteLocationName||'—',bm,by+16.5);
+  lbl('BDM',bm+hw+4,by+12.5);val(d.bdmName||d.completedBy||d.assessedBy||d.auditorName||'—',bm+hw+4,by+16.5);
+  divL(by+19);
+  lbl('ADDRESS',bm,by+22);
+  const addr=[d.siteAddress,d.suburb,d.state,d.postcode].filter(Boolean).join(', ')||'—';
+  doc.setFont('helvetica','normal');doc.setFontSize(7.5);doc.setTextColor(...BLK);
+  doc.text(addr.substring(0,65),bm,by+26);
+  divL(by+28.5);
+  lbl('BUSINESS CONTACT',bm,by+31.5);
+  const bizN=(d.c1?.name||d.contactName||d.siteContact||d.bizContactName||'—');
+  doc.setFont('helvetica','bold');doc.setFontSize(7.5);doc.setTextColor(...BLK);
+  doc.text(bizN.substring(0,28),bm,by+35.5);
+  const bizP=d.c1?.phone||d.contactMobile||d.contactPhone||d.bizContactPhone||'';
+  const bizE=d.c1?.email||d.contactEmail||d.bizContactEmail||'';
+  doc.setFont('helvetica','normal');doc.setFontSize(7);
+  if(bizP){doc.setTextColor(...GRAY);doc.text(bizP,bm+48,by+35.5);}
+  if(bizE){doc.setTextColor(...BLUE);doc.text(bizE.substring(0,32),bm+74,by+35.5);}
+  return by+37+4;
+}
+
 async function generatePDF(returnDoc=false) {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
@@ -1071,22 +1120,16 @@ async function generatePDF(returnDoc=false) {
   function fRow(l,v) { chk(8); doc.setTextColor(...GRAY); doc.setFontSize(7); doc.setFont('helvetica','normal'); doc.text(l,margin,y); doc.setTextColor(30,40,50); doc.setFontSize(9); const lines=doc.splitTextToSize(v||'—',cW-2); doc.text(lines,margin,y+4); y+=4+lines.length*4+3; }
   function twoRow(l1,v1,l2,v2) { chk(12); const hw=cW/2-2; doc.setTextColor(...GRAY); doc.setFontSize(7); doc.setFont('helvetica','normal'); doc.text(l1,margin,y); doc.text(l2,margin+cW/2+2,y); y+=4; doc.setTextColor(30,40,50); doc.setFontSize(9); const a=doc.splitTextToSize(v1||'—',hw), b=doc.splitTextToSize(v2||'—',hw); doc.text(a,margin,y); doc.text(b,margin+cW/2+2,y); y+=Math.max(a.length,b.length)*4+4; }
 
-  // Header
-  doc.setFillColor(...PURPLE); doc.rect(0,0,210,32,'F');
-  doc.setFillColor(139,92,246); doc.rect(0,28,210,4,'F');
-  doc.setTextColor(255,255,255); doc.setFontSize(7); doc.setFont('helvetica','normal'); doc.text('BIOBLUE',margin,10);
-  doc.setFontSize(15); doc.setFont('helvetica','bold'); doc.text('Prospect / Client Form',margin,18);
-  doc.setFontSize(8); doc.setFont('helvetica','normal'); doc.text('New &amp; Existing Clients · Lead Capture · CRM Data',margin,24);
-  doc.text(d.prospectDate?`Date: ${d.prospectDate}`:'', pageW-margin,18,{align:'right'});
-  doc.text(d.companyName||'', pageW-margin,24,{align:'right'});
-  y=40;
+  // ── STANDARD HEADER (softened purple ~35%) ──
+  y = drawStdHeader(doc, d, 'Prospect / Client Form', [148,111,208], [245,242,255]);
 
   // S1
-  twoRow('Business / Company Name',d.companyName,'Date',d.prospectDate);
+  secHdr('1. CLIENT DETAILS');
+  twoRow('Billing Entity',d.billingEntity||d.companyName,'Generated Site Name',d.generatedSiteName);
   fRow('Site Address',[d.siteAddress,d.suburb,d.state,d.postcode].filter(Boolean).join(', '));
 
   // S2
-  secHdr('2. SITE CONTACT');
+  secHdr('2. CONTACTS');
   twoRow('Business Contact',d.c1?.name||d.contactName,'Title / Role',d.c1?.role||d.contactRole);
   twoRow('Phone',d.c1?.phone||d.contactMobile,'Email',d.c1?.email||d.contactEmail);
 
@@ -1115,7 +1158,7 @@ async function generatePDF(returnDoc=false) {
   }
 
   if (returnDoc) return doc;
-  doc.save(`BioBlue_Prospect_${d.companyName.replace(/\s+/g,'_')||'Draft'}_${d.prospectDate||'undated'}.pdf`);
+  doc.save(((d.generatedSiteName||d.companyName||'Draft').replace(/[^a-zA-Z0-9\s]/g,'').trim().replace(/\s+/g,'_'))+'.Client.pdf');
   showToast('📄 PDF downloaded!');
 }
 
@@ -1165,6 +1208,8 @@ async function createClientRecord(d, folderId) {
   set('Client ID',     newId);
   set('Billing Entity',d.billingEntity||d.companyName);
   set('Site Name',     d.generatedSiteName||d.companyName);
+  set('Site Location Name', d.siteLocationName);
+  set('Descriptor',    d.descriptor);
   set('Street Address',d.siteAddress);
   set('Suburb',        d.suburb);
   set('State',         d.state);
@@ -1372,7 +1417,7 @@ async function uploadAndSend() {
   showToast('⏳ Generating PDF...');
   const pdfDoc = await generatePDF(true);
   const pdfBlob = pdfDoc.output('blob');
-  const baseName = `BioBlue_Prospect_${d.companyName.replace(/\s+/g,'_')}_${d.prospectDate}`;
+  const baseName = ((d.generatedSiteName||d.companyName||'Draft').replace(/[^a-zA-Z0-9\s]/g,'').trim().replace(/\s+/g,'_'))+'.Client';
 
   try {
     showToast('☁️ Connecting to Google...');
