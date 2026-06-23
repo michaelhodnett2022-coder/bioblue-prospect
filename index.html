@@ -1760,26 +1760,55 @@ async function fetchClientDetails(clientId) {
     const get = col => { const i = hdrs.indexOf(col); return (i > -1 && row[i]) ? row[i].toString() : ''; };
 
     const fields = {
-      customerName:  get('Billing Entity'),
-      companyName:   get('Billing Entity'),
-      siteName:      get('Site Name') || get('Billing Entity'),
-      siteAddress:   get('Street Address'),
-      suburb:        get('Suburb'),
-      postcode:      get('Postcode'),
-      contactName:   get('Contact Name'),
-      contactRole:   get('Contact Title'),
-      contactMobile: get('Contact Mobile'),
-      contactEmail:  get('Contact Email'),
-      contactPhone:  get('Contact Mobile'),
-      siteContact:   get('Contact Name'),
-      siteMobile:    get('Contact Mobile'),
-      siteEmail:     get('Contact Email'),
+      billingEntity:     get('Billing Entity'),
+      siteLocationName:  get('Site Location Name'),
+      descriptor:        get('Descriptor'),
+      generatedSiteName: get('Site Name'),
+      siteAddress:       get('Street Address'),
+      suburb:            get('Suburb'),
+      postcode:          get('Postcode'),
+      currentSupplier:   get('Current Supplier'),
+      estVolume:         get('Estimated Volume'),
+      // Contact 1 — Business / Site Contact
+      c1Name:  get('Business Contact Name')  || get('Contact Name'),
+      c1Role:  get('Business Contact Role')  || get('Contact Title'),
+      c1Email: get('Business Contact Email') || get('Contact Email'),
+      c1Phone: get('Business Contact Phone') || get('Contact Mobile'),
+      // Contact 2 — Key Decision Maker
+      c2Name:  get('KDM Name'),
+      c2Role:  get('KDM Role'),
+      c2Email: get('KDM Email'),
+      c2Phone: get('KDM Phone'),
+      // Contact 3 — Logistics
+      c3Name:  get('Logistics Name'),
+      c3Role:  get('Logistics Role'),
+      c3Email: get('Logistics Email'),
+      c3Phone: get('Logistics Phone'),
+      // Contact 4 — Admin / Invoicing
+      c4Name:  get('Admin Contact Name'),
+      c4Role:  get('Admin Contact Role'),
+      c4Email: get('Admin Contact Email'),
+      c4Phone: get('Admin Contact Phone'),
+      // Contact 5 — Other
+      c5Label: get('Other Contact Label'),
+      c5Name:  get('Other Contact Name'),
+      c5Role:  get('Other Contact Role'),
+      c5Email: get('Other Contact Email'),
+      c5Phone: get('Other Contact Phone'),
     };
 
     Object.entries(fields).forEach(([id, val]) => {
       const el = document.getElementById(id);
       if (el && val) el.value = val;
     });
+
+    // Apply the same "generated" visual treatment as generateSiteName() does
+    const _gsnEl = document.getElementById('generatedSiteName');
+    if (_gsnEl && _gsnEl.value) { _gsnEl.style.background = '#ede9fe'; _gsnEl.style.color = '#5b21b6'; }
+
+    // Product Interest uses a pill-button group, not a plain input — set via its own handler
+    const _productInterestVal = get('Product Interest');
+    if (_productInterestVal) setInterest(_productInterestVal);
 
     const stateVal = get('State');
     const stateEl  = document.getElementById('state');
