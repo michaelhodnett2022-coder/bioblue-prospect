@@ -981,6 +981,7 @@ async function checkDuplicateSiteName(generatedName) {
       { headers: { Authorization: `Bearer ${gdriveToken}` } });
     const ab = await dl.arrayBuffer();
     const wb = XLSX.read(new Uint8Array(ab), { type:'array' });
+    repairClientRecordsHeaders(wb);
     const ws = wb.Sheets['Client Records'];
     const rows = XLSX.utils.sheet_to_json(ws, { header:1 });
     const hdrs = rows[0] || [];
@@ -1186,12 +1187,51 @@ async function getFolderId() {
   return (await cr.json()).id;
 }
 
+// =====================================================================
+// SELF-HEALING COLUMN REPAIR — patches an existing live spreadsheet
+// that may still have the old stale header row, by appending any
+// missing canonical columns (and extending data rows to match).
+// =====================================================================
+function repairClientRecordsHeaders(wb) {
+  const ws = wb.Sheets['Client Records'];
+  if (!ws) return;
+  const CANONICAL = [
+    'Client ID','Billing Entity','Site Name','Site Location Name','Descriptor',
+    'Street Address','Suburb','State','Postcode',
+    'Business Contact Name','Business Contact Role','Business Contact Email','Business Contact Phone',
+    'KDM Name','KDM Role','KDM Email','KDM Phone',
+    'Logistics Name','Logistics Role','Logistics Email','Logistics Phone',
+    'Admin Contact Name','Admin Contact Role','Admin Contact Email','Admin Contact Phone',
+    'Other Contact Label','Other Contact Name','Other Contact Role','Other Contact Email','Other Contact Phone',
+    'POD Email',
+    'Contact Name','Contact Title','Contact Mobile','Contact Email',
+    'Product Interest','Current Supplier','Estimated Volume','Estimated Current Price','Active Products',
+    'Is Distributor / Reseller','Additional Invoicing Emails','PO Required','PO Delivery Email',
+    'BDM Email','Max Vehicle Size','Latest Note',
+    'Prospect \u2713','Quote Sent \u2713','Site Admin \u2713','Site Audit \u2713','Pkg Assessment \u2713','Customer \u2713',
+    'Drive Folder ID','Created Date','Created By','Notes Log'
+  ];
+  const rows = XLSX.utils.sheet_to_json(ws, { header:1 });
+  if (!rows.length) return;
+  const existing = rows[0] || [];
+  const missing  = CANONICAL.filter(c => !existing.includes(c));
+  if (!missing.length) return; // already up to date
+  const newHeaders = [...existing, ...missing];
+  rows[0] = newHeaders;
+  for (let i=1; i<rows.length; i++) {
+    while (rows[i].length < newHeaders.length) rows[i].push('');
+  }
+  wb.Sheets['Client Records'] = XLSX.utils.aoa_to_sheet(rows);
+  console.log('Repaired Client Records headers — added:', missing);
+}
+
 async function createClientRecord(d, folderId) {
   const fileId = await getAdminSheetId(folderId);
   if (!fileId) { console.warn('Could not get admin sheet'); return; }
   const dl = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, { headers:{ Authorization:`Bearer ${gdriveToken}` } });
   const ab = await dl.arrayBuffer();
   const wb = XLSX.read(new Uint8Array(ab), { type:'array' });
+  repairClientRecordsHeaders(wb);
   const ws = wb.Sheets['Client Records'];
   const rows = XLSX.utils.sheet_to_json(ws, { header:1 });
   const headers = rows[0] || [];
@@ -1300,6 +1340,7 @@ async function appendConversationNote(d) {
     const dl = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, { headers: { Authorization: `Bearer ${gdriveToken}` } });
     const ab = await dl.arrayBuffer();
     const wb = XLSX.read(new Uint8Array(ab), { type: 'array' });
+    repairClientRecordsHeaders(wb);
 
     const ws   = wb.Sheets['Client Records'];
     const rows = XLSX.utils.sheet_to_json(ws, { header: 1 });
@@ -1625,6 +1666,7 @@ async function fetchClientDetails(clientId) {
     );
     const ab   = await dl.arrayBuffer();
     const wb   = XLSX.read(new Uint8Array(ab), { type: 'array' });
+    repairClientRecordsHeaders(wb);
     const ws   = wb.Sheets['Client Records'];
     const rows = XLSX.utils.sheet_to_json(ws, { header: 1 });
     const hdrs = rows[0] || [];
@@ -1729,6 +1771,7 @@ async function getClientFolderFromRecord(parentFolderId, clientId, fallbackName)
     );
     const ab  = await dl.arrayBuffer();
     const wb  = XLSX.read(new Uint8Array(ab), { type: 'array' });
+    repairClientRecordsHeaders(wb);
     const ws  = wb.Sheets['Client Records'];
     const rows = XLSX.utils.sheet_to_json(ws, { header: 1 });
     const hdrs = rows[0] || [];
@@ -1759,6 +1802,7 @@ async function saveClientFolderIdToRecord(parentFolderId, clientId, folderId) {
     const dl     = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, { headers: { Authorization: `Bearer ${gdriveToken}` } });
     const ab     = await dl.arrayBuffer();
     const wb     = XLSX.read(new Uint8Array(ab), { type: 'array' });
+    repairClientRecordsHeaders(wb);
     const ws     = wb.Sheets['Client Records'];
     const rows   = XLSX.utils.sheet_to_json(ws, { header: 1 });
     const hdrs   = rows[0] || [];
@@ -1834,10 +1878,20 @@ async function getAdminSheetId(rootFolderId) {
 
   // 3. Not found — create a fresh workbook with correct columns
   const headers = [
-    'Client ID','Billing Entity','Site Name','Street Address','Suburb','State','Postcode',
+    'Client ID','Billing Entity','Site Name','Site Location Name','Descriptor',
+    'Street Address','Suburb','State','Postcode',
+    'Business Contact Name','Business Contact Role','Business Contact Email','Business Contact Phone',
+    'KDM Name','KDM Role','KDM Email','KDM Phone',
+    'Logistics Name','Logistics Role','Logistics Email','Logistics Phone',
+    'Admin Contact Name','Admin Contact Role','Admin Contact Email','Admin Contact Phone',
+    'Other Contact Label','Other Contact Name','Other Contact Role','Other Contact Email','Other Contact Phone',
+    'POD Email',
     'Contact Name','Contact Title','Contact Mobile','Contact Email',
-    'Prospect \u2713','Quote Sent \u2713','Pkg Assessment \u2713','Site Admin \u2713',
-    'Site Audit \u2713','Customer \u2713','Drive Folder ID','Created Date','Created By','Notes Log'
+    'Product Interest','Current Supplier','Estimated Volume','Estimated Current Price','Active Products',
+    'Is Distributor / Reseller','Additional Invoicing Emails','PO Required','PO Delivery Email',
+    'BDM Email','Max Vehicle Size','Latest Note',
+    'Prospect \u2713','Quote Sent \u2713','Site Admin \u2713','Site Audit \u2713','Pkg Assessment \u2713','Customer \u2713',
+    'Drive Folder ID','Created Date','Created By','Notes Log'
   ];
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.aoa_to_sheet([headers]);
