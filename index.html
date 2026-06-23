@@ -235,8 +235,9 @@
         </div>
 
         <div class="field-group" style="margin-bottom:10px;">
-          <label class="field-label required">Site Location Name / End User Name</label>
+          <label class="field-label">Site Name / End User Name</label>
           <input type="text" id="siteLocationName" placeholder="" oninput="generateSiteName();updateProgress()">
+          <div style="font-size:11px;color:var(--gray-mid);margin-top:4px;">i.e. what does the customer call this site? Eg Shed B</div>
         </div>
 
         <div class="field-row" style="margin-bottom:10px;">
@@ -537,7 +538,7 @@
     <div class="section-header" onclick="toggleSection('s3')">
       <div class="section-header-icon">🎯</div>
       <div class="section-header-text">
-        <h2>2. Opportunity <span style="font-size:10px;font-weight:400;opacity:0.7;">(optional)</span></h2>
+        <h2>3. Opportunity <span style="font-size:10px;font-weight:400;opacity:0.7;">(optional)</span></h2>
         <p>Product interest and current setup</p>
       </div>
       <div class="section-toggle" id="toggle-s3">▶</div>
@@ -573,7 +574,7 @@
     <div class="section-header" onclick="toggleSection('s4')">
       <div class="section-header-icon">💬</div>
       <div class="section-header-text">
-        <h2>3. Conversation <span style="font-size:10px;font-weight:400;opacity:0.7;">(optional)</span></h2>
+        <h2>4. Conversation <span style="font-size:10px;font-weight:400;opacity:0.7;">(optional)</span></h2>
         <p>Notes, follow-up and next steps</p>
       </div>
       <div class="section-toggle" id="toggle-s4">▶</div>
@@ -609,7 +610,7 @@
     <div class="section-header" onclick="toggleSection('s5')">
       <div class="section-header-icon">✍️</div>
       <div class="section-header-text">
-        <h2>4. Sign-Off</h2>
+        <h2>5. Sign-Off</h2>
         <p>BDM confirmation</p>
       </div>
       <div class="section-toggle" id="toggle-s5">▶</div>
@@ -647,7 +648,13 @@
   <div class="modal-box">
     <h3>✅ Prospect Submitted</h3>
     <p id="modalMsg"></p>
-    <div class="modal-actions"><button class="btn-primary" onclick="closeModal()">Close</button></div>
+    <div class="modal-actions">
+      <button class="btn-primary" onclick="closeModal()">Close</button>
+      <button class="btn-primary" id="modalFieldToolsBtn" style="display:none;background:var(--purple-dark);"
+        onclick="window.location.href='https://michaelhodnett2022-coder.github.io/bioblue-field-tools'">
+        ← Field Tools
+      </button>
+    </div>
   </div>
 </div>
 <div class="toast" id="toast"></div>
@@ -725,14 +732,14 @@ function applySameAs(targetNum, sourceNum) {
 function generateSiteName() {
   const billing  = (document.getElementById('billingEntity')?.value||'').trim();
   const siteLoc  = (document.getElementById('siteLocationName')?.value||'').trim();
-  const desc     = document.getElementById('descriptor')?.value||'';
   const suburb   = (document.getElementById('suburb')?.value||'').trim();
   const state    = document.getElementById('state')?.value||'';
   const out      = document.getElementById('generatedSiteName');
-  if (!billing||!desc||!suburb||!state) { if(out) out.value=''; return; }
-  // Build middle part — avoid duplicating site name if same as descriptor
-  const middle = (siteLoc && siteLoc.toLowerCase()!==desc.toLowerCase()) ? siteLoc+' '+desc : desc;
-  const name   = billing+' – '+middle+' ('+suburb+', '+state+')';
+  if (!billing||!suburb||!state) { if(out) out.value=''; return; }
+  // Build name — Site Location Name is optional; Descriptor never appears in the generated name
+  const name = siteLoc
+    ? billing+' – '+siteLoc+' ('+suburb+', '+state+')'
+    : billing+' ('+suburb+', '+state+')';
   if (out) { out.value=name; out.style.background='#ede9fe'; out.style.color='#5b21b6'; }
   // Sync companyName for backward compat
   const cn = document.getElementById('companyName');
@@ -1069,14 +1076,16 @@ function drawStdHeader(doc, d, formLabel, MC, ML) {
   doc.text('Bio',margin,9);
   const bW=doc.getTextWidth('Bio');
   doc.setTextColor(...BLUE);doc.text('Blue',margin+bW,9);
+  const blueW=doc.getTextWidth('Blue'); // measured BEFORE font size changes below — fixes overlap bug
   doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(...GRAY);
-  doc.text('  ·  '+formLabel,margin+bW+doc.getTextWidth('Blue'),9);
+  doc.text('  ·  '+formLabel,margin+bW+blueW,9);
   const dv=d.prospectDate||d.formDate||d.auditDate||d.assessDate||'';
   if(dv){let ds=dv;try{ds=new Date(dv+'T12:00:00').toLocaleDateString('en-AU');}catch(e){}doc.text(ds,pW-margin,9,{align:'right'});}
   doc.setDrawColor(...BLUE);doc.setLineWidth(0.4);doc.line(margin,11.5,pW-margin,11.5);
   doc.setFillColor(...MC);doc.rect(margin,13,cW,14,'F');
   doc.setFont('helvetica','normal');doc.setFontSize(5.5);doc.setTextColor(255,255,255);
   doc.text(formLabel.toUpperCase(),margin+3,17.5);
+  if (d.docRef) { doc.text(d.docRef,pW-margin-3,17.5,{align:'right'}); }
   const sn=(d.generatedSiteName||d.siteName||d.companyName||d.customerName||'').toUpperCase();
   doc.setFont('helvetica','bold');doc.setFontSize(11);
   doc.text(doc.splitTextToSize(sn,cW-8)[0],margin+3,24);
@@ -1108,10 +1117,10 @@ function drawStdHeader(doc, d, formLabel, MC, ML) {
   return by+37+4;
 }
 
-async function generatePDF(returnDoc=false) {
+async function generatePDF(returnDoc=false, presetData=null) {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
-  const d = collectData();
+  const d = presetData || collectData();
   const margin=15, pageW=210, cW=pageW-margin*2;
   let y = margin;
   const PURPLE=[91,33,182], PURPLE_L=[237,233,254], GRAY=[108,117,125], GL=[240,242,244], WHITE=[255,255,255];
@@ -1133,6 +1142,22 @@ async function generatePDF(returnDoc=false) {
   secHdr('2. CONTACTS');
   twoRow('Business Contact',d.c1?.name||d.contactName,'Title / Role',d.c1?.role||d.contactRole);
   twoRow('Phone',d.c1?.phone||d.contactMobile,'Email',d.c1?.email||d.contactEmail);
+  if (d.c2?.name) {
+    twoRow('Key Decision Maker',d.c2.name,'Title / Role',d.c2.role||'—');
+    twoRow('Phone',d.c2.phone||'—','Email',d.c2.email||'—');
+  }
+  if (d.c3?.name) {
+    twoRow('Logistics Contact',d.c3.name,'Title / Role',d.c3.role||'—');
+    twoRow('Phone',d.c3.phone||'—','Email',d.c3.email||'—');
+  }
+  if (d.c4?.name) {
+    twoRow('Admin / Invoicing Contact',d.c4.name,'Title / Role',d.c4.role||'—');
+    twoRow('Phone',d.c4.phone||'—','Email',d.c4.email||'—');
+  }
+  if (d.c5?.name) {
+    twoRow(d.c5.label||'Other Contact',d.c5.name,'Title / Role',d.c5.role||'—');
+    twoRow('Phone',d.c5.phone||'—','Email',d.c5.email||'—');
+  }
 
   // S3
   secHdr('3. OPPORTUNITY');
@@ -1209,6 +1234,7 @@ function repairClientRecordsHeaders(wb) {
     'Is Distributor / Reseller','Additional Invoicing Emails','PO Required','PO Delivery Email',
     'BDM Email','Max Vehicle Size','Latest Note',
     'Prospect \u2713','Quote Sent \u2713','Site Admin \u2713','Site Audit \u2713','Pkg Assessment \u2713','Customer \u2713',
+    'Prospect Doc #','Admin Doc #','Audit Doc #','Packaged Doc #','Quote Doc #',
     'Drive Folder ID','Created Date','Created By','Notes Log'
   ];
   const rows = XLSX.utils.sheet_to_json(ws, { header:1 });
@@ -1225,9 +1251,9 @@ function repairClientRecordsHeaders(wb) {
   console.log('Repaired Client Records headers — added:', missing);
 }
 
-async function createClientRecord(d, folderId) {
+async function createClientRecord(d, folderId, existingClientId) {
   const fileId = await getAdminSheetId(folderId);
-  if (!fileId) { console.warn('Could not get admin sheet'); return; }
+  if (!fileId) { console.warn('Could not get admin sheet'); return null; }
   const dl = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, { headers:{ Authorization:`Bearer ${gdriveToken}` } });
   const ab = await dl.arrayBuffer();
   const wb = XLSX.read(new Uint8Array(ab), { type:'array' });
@@ -1236,15 +1262,30 @@ async function createClientRecord(d, folderId) {
   const rows = XLSX.utils.sheet_to_json(ws, { header:1 });
   const headers = rows[0] || [];
 
-  // Generate new Client ID
-  const existingIds = rows.slice(1).map(r=>r[0]).filter(Boolean);
-  const maxId = existingIds.reduce((m,id) => { const n=parseInt((id+'').replace('BB-','')); return isNaN(n)?m:n>m?n:m; }, 0);
-  const newId = `BB-${String(maxId+1).padStart(4,'0')}`;
+  const idCol = headers.indexOf('Client ID');
+  let rowIdx = -1;
+  if (existingClientId) {
+    rowIdx = rows.findIndex((r,i) => i>0 && (r[idCol]||'').toString() === existingClientId);
+  }
+  const isUpdate = rowIdx > -1;
+
+  // Client ID — reuse existing, or generate a fresh sequential one
+  const newId = isUpdate ? existingClientId : (() => {
+    const existingIds = rows.slice(1).map(r=>r[0]).filter(Boolean);
+    const maxId = existingIds.reduce((m,id) => { const n=parseInt((id+'').replace('BB-','')); return isNaN(n)?m:n>m?n:m; }, 0);
+    return `BB-${String(maxId+1).padStart(4,'0')}`;
+  })();
+
+  // Per-form-type document counter — increments on every Prospect submission for this client
+  const docCountCol = headers.indexOf('Prospect Doc #');
+  const prevCount = isUpdate && docCountCol>-1 ? (parseInt(rows[rowIdx][docCountCol]) || 0) : 0;
+  const docCount = prevCount + 1;
 
   const noteEntry = `[Prospect — ${new Date().toLocaleDateString('en-AU')}, ${d.bdmName}]\nProduct Interest: ${d.productInterest}\nCurrent Supplier: ${d.currentSupplier||'Unknown'}\nEst. Volume: ${d.estVolume||'Unknown'}\n${d.convNotes}\nFollow-up: ${d.followupDate||'—'} — ${d.followupAction||'—'}`;
 
-  const newRow = new Array(headers.length).fill('');
-  const set = (col,val) => { const i=headers.indexOf(col); if(i>-1) newRow[i]=val; };
+  const targetRow = isUpdate ? rows[rowIdx] : new Array(headers.length).fill('');
+  const set = (col,val) => { const i=headers.indexOf(col); if(i>-1) targetRow[i]=val; };
+
   set('Client ID',     newId);
   set('Billing Entity',d.billingEntity||d.companyName);
   set('Site Name',     d.generatedSiteName||d.companyName);
@@ -1286,16 +1327,28 @@ async function createClientRecord(d, folderId) {
   set('Contact Mobile',d.c1.phone);
   set('Contact Email', d.c1.email);
   set('Prospect ✓',   '✓');
-  set('Created Date',  new Date().toLocaleDateString('en-AU'));
-  set('Created By',    d.bdmName);
-  set('Notes Log',     noteEntry);
-  rows.push(newRow);
+  set('Prospect Doc #', docCount);
 
-  // Notes Log tab
+  if (isUpdate) {
+    // Preserve original creation metadata; append to Notes Log rather than overwrite
+    const notesColIdx = headers.indexOf('Notes Log');
+    if (notesColIdx > -1) {
+      const existingNotes = (targetRow[notesColIdx]||'').toString();
+      targetRow[notesColIdx] = existingNotes ? existingNotes + '\n\n' + noteEntry : noteEntry;
+    }
+    rows[rowIdx] = targetRow;
+  } else {
+    set('Created Date',  new Date().toLocaleDateString('en-AU'));
+    set('Created By',    d.bdmName);
+    set('Notes Log',     noteEntry);
+    rows.push(targetRow);
+  }
+
+  // Notes Log tab — always append a fresh timestamped entry regardless of update/create
   const nws = wb.Sheets['Notes Log'];
   if (nws) {
     const nr = XLSX.utils.sheet_to_json(nws, { header:1 });
-    nr.push([newId, d.companyName, '', new Date().toLocaleString('en-AU'), 'Prospect', d.bdmName, d.convNotes]);
+    nr.push([newId, d.companyName, '', new Date().toLocaleString('en-AU'), isUpdate?'Prospect Update':'Prospect', d.bdmName, d.convNotes]);
     wb.Sheets['Notes Log'] = XLSX.utils.aoa_to_sheet(nr);
   }
 
@@ -1311,7 +1364,7 @@ async function createClientRecord(d, folderId) {
   form.append('metadata', new Blob([JSON.stringify({})], { type:'application/json' }));
   form.append('file', blob, CLIENT_RECORDS_NAME);
   await fetch(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=multipart`, { method:'PATCH', headers:{ Authorization:`Bearer ${gdriveToken}` }, body:form });
-  return newId;
+  return { newId, docCount, isUpdate };
 }
 
 // PDF removed from Prospect/Client form — data captured in client record
@@ -1433,53 +1486,69 @@ async function uploadAndSend() {
   if (!d.state) { showToast('⚠️ State required'); return; }
   if (!d.prospectDate) { showToast('⚠️ Date required'); return; }
 
-  // ── DUPLICATE CHECK (skip if updating an existing client) ──
-  const _isUpdateCheck = false; // already handled above
-  if (!_isUpdateCheck && d.generatedSiteName) {
+  const existingClientId = new URLSearchParams(window.location.search).get('client');
+
+  // ── HARD BLOCK — duplicate site name with no client loaded ──
+  // (skipped entirely when a client is already loaded — that's a legitimate update, not a duplicate)
+  if (!existingClientId && d.generatedSiteName) {
     showToast('🔍 Checking for duplicates...');
     try {
       await getDriveToken();
       const dupe = await checkDuplicateSiteName(d.generatedSiteName);
       if (dupe.isDupe) {
-        const proceed = confirm(
-          '⚠️ POSSIBLE DUPLICATE\n\n' +
-          'A client with this site name already exists:\n' +
-          '"' + dupe.existingName + '"' + (dupe.existingId ? '  (' + dupe.existingId + ')' : '') + '\n\n' +
-          'This is usually a sign the site is already in the system.\n\n' +
-          'Tap Cancel to go back and check, or OK to create it anyway.'
-        );
-        if (!proceed) { showToast('Cancelled — no duplicate created'); return; }
+        document.getElementById('modalMsg').textContent =
+          '🚫 This site already exists in the system:\n\n"' + dupe.existingName + '"' +
+          (dupe.existingId ? '  (' + dupe.existingId + ')' : '') + '\n\n' +
+          'To avoid creating duplicate client records, please go back to Field Tools, search for this client, and load it instead — you\'ll be able to edit and update it from there.';
+        document.getElementById('modalFieldToolsBtn').style.display = 'inline-block';
+        document.getElementById('modal').classList.add('active');
+        showToast('🚫 Duplicate blocked — load the existing client instead');
+        return;
       }
     } catch(e) {
       console.warn('Duplicate pre-check skipped:', e.message);
     }
   }
 
-  showToast('⏳ Generating PDF...');
-  const pdfDoc = await generatePDF(true);
-  const pdfBlob = pdfDoc.output('blob');
-  const baseName = ((d.generatedSiteName||d.companyName||'Draft').replace(/[^a-zA-Z0-9\s]/g,'').trim().replace(/\s+/g,'_'))+'.Client';
-
   try {
     showToast('☁️ Connecting to Google...');
     await getDriveToken();
     const folderId = await getFolderId();
 
-    // Create client folder using Generated Site Name
+    // Use the stored folder ID when updating an existing client (protects against
+    // the folder name drifting if site details are edited); otherwise create fresh.
     const clientFolderName = d.generatedSiteName || d.companyName || 'Unknown Client';
-    showToast('📁 Creating client folder...');
-    const clientFolderId = await getOrCreateClientFolder(folderId, clientFolderName);
+    showToast('📁 Preparing client folder...');
+    const clientFolderId = existingClientId
+      ? await getClientFolderFromRecord(folderId, existingClientId, clientFolderName)
+      : await getOrCreateClientFolder(folderId, clientFolderName);
 
-    // Upload PDF into client folder
+    // Create or update client record FIRST — gives us the doc counter for the PDF header
+    showToast('📊 Saving client record...');
+    const result = await createClientRecord(d, folderId, existingClientId);
+    if (!result) throw new Error('Could not save client record');
+    const { newId, docCount, isUpdate } = result;
+    d.docRef = newId + (docCount ? '-' + docCount : '');
+
+    showToast('⏳ Generating PDF...');
+    const pdfDoc = await generatePDF(true, d);
+    const pdfBlob = pdfDoc.output('blob');
+    const baseName = ((d.generatedSiteName||d.companyName||'Draft').replace(/[^a-zA-Z0-9\s]/g,'').trim().replace(/\s+/g,'_'))+'.Client';
+
+    // Upload PDF — overwrite existing file of the same name if present, never duplicate
+    const existingFileId = await findExistingFile(baseName+'.pdf', clientFolderId);
     const form = new FormData();
-    form.append('metadata', new Blob([JSON.stringify({ name:baseName+'.pdf', parents:[clientFolderId] })], { type:'application/json' }));
-    form.append('file', pdfBlob, baseName+'.pdf');
-    const up = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink', { method:'POST', headers:{ Authorization:`Bearer ${gdriveToken}` }, body:form });
+    let up;
+    if (existingFileId) {
+      form.append('metadata', new Blob([JSON.stringify({})], { type:'application/json' }));
+      form.append('file', pdfBlob, baseName+'.pdf');
+      up = await fetch(`https://www.googleapis.com/upload/drive/v3/files/${existingFileId}?uploadType=multipart&fields=id,webViewLink`, { method:'PATCH', headers:{ Authorization:`Bearer ${gdriveToken}` }, body:form });
+    } else {
+      form.append('metadata', new Blob([JSON.stringify({ name:baseName+'.pdf', parents:[clientFolderId] })], { type:'application/json' }));
+      form.append('file', pdfBlob, baseName+'.pdf');
+      up = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink', { method:'POST', headers:{ Authorization:`Bearer ${gdriveToken}` }, body:form });
+    }
     const uploaded = await up.json();
-
-    // Create client record
-    showToast('📊 Creating client record...');
-    const newId = await createClientRecord(d, folderId);
 
     // Save folder ID to client record for other forms to use
     if (newId && clientFolderId) {
@@ -1501,18 +1570,31 @@ async function uploadAndSend() {
       setTimeout(() => generateVCard(d), 800);
     }
 
-    document.getElementById('modalMsg').textContent = `✅ Prospect submitted!\n\n🆔 Client ID: ${newId||'assigned'}\n☁️ PDF uploaded to Google Drive\n📊 Client record created — Prospect ✓${d.followupDate ? '\n📅 Calendar invite sent to '+d.bdmEmail : ''}${d.contactName ? '\n👤 Contact card ready to save' : ''}`;
+    document.getElementById('modalMsg').textContent = `✅ Prospect ${isUpdate?'updated':'submitted'}!\n\n🆔 Document Ref: ${d.docRef}\n☁️ PDF ${existingFileId?'updated':'uploaded'} to Google Drive\n📊 Client record ${isUpdate?'updated':'created'} — Prospect ✓${d.followupDate ? '\n📅 Calendar invite sent to '+d.bdmEmail : ''}${d.contactName ? '\n👤 Contact card ready to save' : ''}`;
     redirectToFieldTools(newId||'');
     document.getElementById('modal').classList.add('active');
 
   } catch(e) {
     gdriveToken = null;
-    const url = URL.createObjectURL(pdfBlob);
-    const a = document.createElement('a'); a.href=url; a.download=baseName+'.pdf';
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 30000);
-    document.getElementById('modalMsg').textContent = `⚠️ Drive upload failed: ${e.message}\n\nPDF saved to device instead.`;
+    document.getElementById('modalMsg').textContent = `⚠️ Save failed: ${e.message}\n\nPlease try again.`;
     document.getElementById('modal').classList.add('active');
+  }
+}
+
+// =====================================================================
+// FIND EXISTING FILE BY NAME — used to overwrite rather than duplicate
+// =====================================================================
+async function findExistingFile(fileName, folderId) {
+  try {
+    const sr = await fetch(
+      `https://www.googleapis.com/drive/v3/files?q=name='${fileName.replace(/'/g,"\\'")}' and '${folderId}' in parents and trashed=false&fields=files(id)`,
+      { headers: { Authorization: `Bearer ${gdriveToken}` } }
+    );
+    const sd = await sr.json();
+    return (sd.files && sd.files.length) ? sd.files[0].id : null;
+  } catch(e) {
+    console.warn('findExistingFile check failed:', e.message);
+    return null;
   }
 }
 
@@ -1710,6 +1792,12 @@ async function fetchClientDetails(clientId) {
     const nameEl = document.getElementById('bannerClientName');
     if (nameEl) nameEl.textContent = get('Billing Entity') || clientId;
 
+    // Show the next document reference (current count + 1) in the banner
+    const _prevCount = parseInt(get('Prospect Doc #')) || 0;
+    const _nextRef = clientId + '-' + (_prevCount + 1);
+    const bannerIdEl = document.getElementById('bannerClientId');
+    if (bannerIdEl) bannerIdEl.textContent = 'Ref: ' + clientId + '  ·  This submission will be ' + _nextRef;
+
     // Hide the retry button once loaded
     const rb = document.getElementById('prefillRetryBtn');
     if (rb) rb.style.display = 'none';
@@ -1891,6 +1979,7 @@ async function getAdminSheetId(rootFolderId) {
     'Is Distributor / Reseller','Additional Invoicing Emails','PO Required','PO Delivery Email',
     'BDM Email','Max Vehicle Size','Latest Note',
     'Prospect \u2713','Quote Sent \u2713','Site Admin \u2713','Site Audit \u2713','Pkg Assessment \u2713','Customer \u2713',
+    'Prospect Doc #','Admin Doc #','Audit Doc #','Packaged Doc #','Quote Doc #',
     'Drive Folder ID','Created Date','Created By','Notes Log'
   ];
   const wb = XLSX.utils.book_new();
