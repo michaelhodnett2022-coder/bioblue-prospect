@@ -231,19 +231,19 @@
 
         <div class="field-group" style="margin-bottom:10px;">
           <label class="field-label required">Customer Billing Entity</label>
-          <input type="text" id="billingEntity" placeholder="Who BioBlue invoices e.g. Wickhams" oninput="generateSiteName();updateProgress()">
+          <input type="text" id="billingEntity" placeholder="Who BioBlue invoices e.g. Wickhams" oninput="generateSiteName();generateTrackpodName();updateProgress()">
         </div>
 
         <div class="field-group" style="margin-bottom:10px;">
           <label class="field-label">Site Name / End User Name</label>
-          <input type="text" id="siteLocationName" placeholder="" oninput="generateSiteName();updateProgress()">
+          <input type="text" id="siteLocationName" placeholder="" oninput="generateSiteName();generateTrackpodName();updateProgress()">
           <div style="font-size:11px;color:var(--gray-mid);margin-top:4px;">i.e. what does the customer call this site? Eg Shed B</div>
         </div>
 
         <div class="field-row" style="margin-bottom:10px;">
           <div class="field-group">
             <label class="field-label required">Descriptor</label>
-            <select id="descriptor" onchange="generateSiteName();updateProgress()">
+            <select id="descriptor" onchange="generateSiteName();generateTrackpodName();updateProgress()">
               <option value="">Select...</option>
               <option>Depot</option>
               <option>Mine</option>
@@ -263,7 +263,7 @@
           </div>
           <div class="field-group">
             <label class="field-label required">State</label>
-            <select id="state" onchange="generateSiteName();updateProgress()">
+            <select id="state" onchange="generateSiteName();generateTrackpodName();updateProgress()">
               <option value="">Select...</option>
               <option>WA</option><option>NSW</option><option>VIC</option>
               <option>QLD</option><option>SA</option><option>TAS</option>
@@ -274,12 +274,18 @@
 
         <div class="field-group" style="margin-bottom:10px;">
           <label class="field-label required">Suburb</label>
-          <input type="text" id="suburb" placeholder="" oninput="generateSiteName();updateProgress()">
+          <input type="text" id="suburb" placeholder="" oninput="generateSiteName();generateTrackpodName();updateProgress()">
         </div>
 
         <div class="field-group">
           <label class="field-label">Generated Site Name <span style="font-weight:400;font-size:10px;">(locked)</span></label>
           <input type="text" id="generatedSiteName" readonly placeholder="Fill fields above to generate name..."
+            style="background:#f0f0ff;border-color:var(--purple-light);color:var(--purple-dark);font-weight:700;cursor:default;">
+        </div>
+
+        <div class="field-group" style="margin-top:10px;">
+          <label class="field-label">Trackpod Name <span style="font-weight:400;font-size:10px;">(locked)</span></label>
+          <input type="text" id="trackpodName" readonly placeholder="Fill fields above to generate name..."
             style="background:#f0f0ff;border-color:var(--purple-light);color:var(--purple-dark);font-weight:700;cursor:default;">
         </div>
       </div>
@@ -746,6 +752,23 @@ function generateSiteName() {
   if (cn) cn.value = billing;
 }
 
+// =====================================================================
+// TRACKPOD NAME — separate naming output, does not affect file/document
+// naming convention in any way. Site Name / End User Name + Suburb + State,
+// falling back to Billing Entity + Suburb + State when Site Name is blank.
+// =====================================================================
+function generateTrackpodName() {
+  const billing = (document.getElementById('billingEntity')?.value||'').trim();
+  const siteLoc = (document.getElementById('siteLocationName')?.value||'').trim();
+  const suburb  = (document.getElementById('suburb')?.value||'').trim();
+  const state   = document.getElementById('state')?.value||'';
+  const out     = document.getElementById('trackpodName');
+  if (!billing||!suburb||!state) { if(out) out.value=''; return; }
+  const base = siteLoc || billing;
+  const name = base+', '+suburb+' '+state;
+  if (out) { out.value=name; out.style.background='#ede9fe'; out.style.color='#5b21b6'; }
+}
+
 function syncBDM(name) {
   // Sync top BDM selector with bottom sign-off selector
   const bottom = document.getElementById('bdmName');
@@ -873,6 +896,7 @@ function collectData() {
     siteLocationName: g('siteLocationName'),
     descriptor:       g('descriptor'),
     generatedSiteName:g('generatedSiteName'),
+    trackpodName:     g('trackpodName'),
     prospectDate:     g('prospectDate'),
     siteAddress:      g('siteAddress'),
     suburb:           g('suburb'),
@@ -1082,14 +1106,18 @@ function drawStdHeader(doc, d, formLabel, MC, ML) {
   const dv=d.prospectDate||d.formDate||d.auditDate||d.assessDate||'';
   if(dv){let ds=dv;try{ds=new Date(dv+'T12:00:00').toLocaleDateString('en-AU');}catch(e){}doc.text(ds,pW-margin,9,{align:'right'});}
   doc.setDrawColor(...BLUE);doc.setLineWidth(0.4);doc.line(margin,11.5,pW-margin,11.5);
-  doc.setFillColor(...MC);doc.rect(margin,13,cW,14,'F');
+  doc.setFillColor(...MC);doc.rect(margin,13,cW,19,'F');
   doc.setFont('helvetica','normal');doc.setFontSize(5.5);doc.setTextColor(255,255,255);
   doc.text(formLabel.toUpperCase(),margin+3,17.5);
   if (d.docRef) { doc.text(d.docRef,pW-margin-3,17.5,{align:'right'}); }
   const sn=(d.generatedSiteName||d.siteName||d.companyName||d.customerName||'').toUpperCase();
-  doc.setFont('helvetica','bold');doc.setFontSize(11);
+  doc.setFont('helvetica','bold');doc.setFontSize(11);doc.setTextColor(255,255,255);
   doc.text(doc.splitTextToSize(sn,cW-8)[0],margin+3,24);
-  const by=28.5;doc.setFillColor(...ML);doc.rect(margin,by,cW,37,'F');
+  if (d.trackpodName) {
+    doc.setFont('helvetica','normal');doc.setFontSize(6.5);doc.setTextColor(255,255,255);
+    doc.text('Trackpod Name: '+d.trackpodName,margin+3,29);
+  }
+  const by=33.5;doc.setFillColor(...ML);doc.rect(margin,by,cW,37,'F');
   const bm=margin+3,hw=(cW-8)/2;
   const lbl=(t,x,y)=>{doc.setFont('helvetica','normal');doc.setFontSize(5.5);doc.setTextColor(...MC);doc.text(t,x,y);};
   const val=(t,x,y)=>{doc.setFont('helvetica','bold');doc.setFontSize(7.5);doc.setTextColor(...BLK);doc.text((t||'—').toString().substring(0,42),x,y);};
@@ -1221,7 +1249,7 @@ function repairClientRecordsHeaders(wb) {
   const ws = wb.Sheets['Client Records'];
   if (!ws) return;
   const CANONICAL = [
-    'Client ID','Billing Entity','Site Name','Site Location Name','Descriptor',
+    'Client ID','Billing Entity','Site Name','Site Location Name','Descriptor','Trackpod Name',
     'Street Address','Suburb','State','Postcode',
     'Business Contact Name','Business Contact Role','Business Contact Email','Business Contact Phone',
     'KDM Name','KDM Role','KDM Email','KDM Phone',
@@ -1290,6 +1318,7 @@ async function createClientRecord(d, folderId, existingClientId) {
   set('Billing Entity',d.billingEntity||d.companyName);
   set('Site Name',     d.generatedSiteName||d.companyName);
   set('Site Location Name', d.siteLocationName);
+  set('Trackpod Name', d.trackpodName);
   set('Descriptor',    d.descriptor);
   set('Street Address',d.siteAddress);
   set('Suburb',        d.suburb);
@@ -1764,6 +1793,7 @@ async function fetchClientDetails(clientId) {
       siteLocationName:  get('Site Location Name'),
       descriptor:        get('Descriptor'),
       generatedSiteName: get('Site Name'),
+      trackpodName:      get('Trackpod Name'),
       siteAddress:       get('Street Address'),
       suburb:            get('Suburb'),
       postcode:          get('Postcode'),
@@ -1805,6 +1835,8 @@ async function fetchClientDetails(clientId) {
     // Apply the same "generated" visual treatment as generateSiteName() does
     const _gsnEl = document.getElementById('generatedSiteName');
     if (_gsnEl && _gsnEl.value) { _gsnEl.style.background = '#ede9fe'; _gsnEl.style.color = '#5b21b6'; }
+    const _tpnEl = document.getElementById('trackpodName');
+    if (_tpnEl && _tpnEl.value) { _tpnEl.style.background = '#ede9fe'; _tpnEl.style.color = '#5b21b6'; }
 
     // Product Interest uses a pill-button group, not a plain input — set via its own handler
     const _productInterestVal = get('Product Interest');
@@ -1995,7 +2027,7 @@ async function getAdminSheetId(rootFolderId) {
 
   // 3. Not found — create a fresh workbook with correct columns
   const headers = [
-    'Client ID','Billing Entity','Site Name','Site Location Name','Descriptor',
+    'Client ID','Billing Entity','Site Name','Site Location Name','Descriptor','Trackpod Name',
     'Street Address','Suburb','State','Postcode',
     'Business Contact Name','Business Contact Role','Business Contact Email','Business Contact Phone',
     'KDM Name','KDM Role','KDM Email','KDM Phone',
