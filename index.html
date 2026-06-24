@@ -235,9 +235,8 @@
         </div>
 
         <div class="field-group" style="margin-bottom:10px;">
-          <label class="field-label">Site Name / End User Name</label>
+          <label class="field-label">Site Tag Name <span style="font-weight:400;font-size:10px;">(This is what the customer calls this site eg Rosies Roadhouse)</span></label>
           <input type="text" id="siteLocationName" placeholder="" oninput="generateSiteName();generateTrackpodName();updateProgress()">
-          <div style="font-size:11px;color:var(--gray-mid);margin-top:4px;">i.e. what does the customer call this site? Eg Shed B</div>
         </div>
 
         <div class="field-row" style="margin-bottom:10px;">
@@ -284,7 +283,7 @@
         </div>
 
         <div class="field-group" style="margin-top:10px;">
-          <label class="field-label">Trackpod Name <span style="font-weight:400;font-size:10px;">(locked)</span></label>
+          <label class="field-label">Site Name (Trackpod) <span style="font-weight:400;font-size:10px;">(locked)</span></label>
           <input type="text" id="trackpodName" readonly placeholder="Fill fields above to generate name..."
             style="background:#f0f0ff;border-color:var(--purple-light);color:var(--purple-dark);font-weight:700;cursor:default;">
         </div>
@@ -754,8 +753,8 @@ function generateSiteName() {
 
 // =====================================================================
 // TRACKPOD NAME — separate naming output, does not affect file/document
-// naming convention in any way. Site Name / End User Name + Suburb + State,
-// falling back to Billing Entity + Suburb + State when Site Name is blank.
+// naming convention in any way. Site Tag Name + Suburb + State,
+// falling back to Billing Entity + Suburb + State when Site Tag Name is blank.
 // =====================================================================
 function generateTrackpodName() {
   const billing = (document.getElementById('billingEntity')?.value||'').trim();
@@ -1115,7 +1114,7 @@ function drawStdHeader(doc, d, formLabel, MC, ML) {
   doc.text(doc.splitTextToSize(sn,cW-8)[0],margin+3,24);
   if (d.trackpodName) {
     doc.setFont('helvetica','normal');doc.setFontSize(6.5);doc.setTextColor(255,255,255);
-    doc.text('Trackpod Name: '+d.trackpodName,margin+3,29);
+    doc.text('Site Name (Trackpod): '+d.trackpodName,margin+3,29);
   }
   const by=33.5;doc.setFillColor(...ML);doc.rect(margin,by,cW,37,'F');
   const bm=margin+3,hw=(cW-8)/2;
@@ -1565,7 +1564,7 @@ async function uploadAndSend() {
     const baseName = ((d.generatedSiteName||d.companyName||'Draft').replace(/[^a-zA-Z0-9\s]/g,'').trim().replace(/\s+/g,'_'))+'.Client';
 
     // Upload PDF — overwrite existing file of the same name if present, never duplicate
-    const existingFileId = await findExistingFile(baseName+'.pdf', clientFolderId);
+    const existingFileId = await findExistingFile('.Client.pdf', clientFolderId);
     const form = new FormData();
     let up;
     if (existingFileId) {
@@ -1613,10 +1612,10 @@ async function uploadAndSend() {
 // =====================================================================
 // FIND EXISTING FILE BY NAME — used to overwrite rather than duplicate
 // =====================================================================
-async function findExistingFile(fileName, folderId) {
+async function findExistingFile(suffix, folderId) {
   try {
     const sr = await fetch(
-      `https://www.googleapis.com/drive/v3/files?q=name='${fileName.replace(/'/g,"\\'")}' and '${folderId}' in parents and trashed=false&fields=files(id)`,
+      `https://www.googleapis.com/drive/v3/files?q=name contains '${suffix.replace(/'/g,"\\'")}' and '${folderId}' in parents and trashed=false&fields=files(id,name)`,
       { headers: { Authorization: `Bearer ${gdriveToken}` } }
     );
     const sd = await sr.json();
