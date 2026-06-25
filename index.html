@@ -91,6 +91,12 @@
   .contact-card-hdr { background:var(--purple-pale);border-bottom:1.5px solid var(--purple-light);padding:10px 14px;display:flex;align-items:center;gap:8px; }
   .contact-card-hdr span { font-size:11px;font-weight:700;color:var(--purple-dark);text-transform:uppercase;letter-spacing:0.5px; }
   .contact-card-body { padding:14px 14px 4px; }
+  .yn-item { display:flex;align-items:flex-start;gap:12px;padding:11px 14px;border-radius:var(--radius-sm);margin-bottom:6px;border:1.5px solid var(--purple-light);background:var(--purple-pale); }
+  .yn-question { flex:1;font-size:13.5px;line-height:1.4;padding-top:2px;color:var(--gray-dark); }
+  .yn-controls { display:flex;gap:6px;flex-shrink:0; }
+  .yn-btn { padding:5px 12px;border-radius:6px;border:1.5px solid var(--gray-light);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;background:white;color:var(--gray-mid); }
+  .yn-btn.active-y { background:var(--green,#16a34a);border-color:var(--green,#16a34a);color:white; }
+  .yn-btn.active-n { background:var(--gray-mid);border-color:var(--gray-mid);color:white; }
   .same-as-wrap { display:flex;align-items:center;gap:8px;background:var(--gray-pale);border:1px solid var(--gray-light);border-radius:7px;padding:7px 10px;margin-bottom:10px; }
   .same-as-wrap label { font-size:11px;font-weight:600;color:var(--gray-mid);white-space:nowrap; }
   .same-as-wrap select { flex:1;font-size:12px;padding:4px 8px;border-radius:5px; }
@@ -348,10 +354,17 @@
     </div>
     <div class="section-body collapsed" id="s2">
 
+      <div class="field-group" style="margin-bottom:14px;">
+        <label class="field-label">Proof of Delivery (POD) Email</label>
+        <input type="email" id="podEmail" placeholder="e.g. pod@company.com.au">
+        <div style="font-size:11px;color:var(--gray-mid);margin-top:4px;">Shared with Admin and Audit forms — fills automatically if already entered there</div>
+      </div>
+      <div style="border-top:1.5px solid var(--gray-light);margin-bottom:16px;"></div>
+
       <!-- CONTACT 1: BUSINESS / SITE CONTACT -->
       <div class="contact-card">
         <div class="contact-card-hdr">
-          <span>Contact 1 — Business / Site Contact</span>
+          <span>Contact 1 — Site Contact</span>
         </div>
         <div class="contact-card-body">
           <div class="field-row">
@@ -388,7 +401,7 @@
             <label>Same as:</label>
             <select id="c2SameAs" onchange="applySameAs(2,this.value)">
               <option value="">— Fill independently —</option>
-              <option value="1">Contact 1 — Business / Site Contact</option>
+              <option value="1">Contact 1 — Site Contact</option>
             </select>
           </div>
           <div class="field-row">
@@ -417,7 +430,7 @@
       <!-- CONTACT 3: LOGISTICS -->
       <div class="contact-card">
         <div class="contact-card-hdr">
-          <span>Contact 3 — Logistics</span>
+          <span>Contact 3 — Logistics Contact</span>
           <span class="linked-badge" id="c3LinkedBadge"></span>
         </div>
         <div class="contact-card-body">
@@ -425,7 +438,7 @@
             <label>Same as:</label>
             <select id="c3SameAs" onchange="applySameAs(3,this.value)">
               <option value="">— Fill independently —</option>
-              <option value="1">Contact 1 — Business / Site Contact</option>
+              <option value="1">Contact 1 — Site Contact</option>
               <option value="2">Contact 2 — Key Decision Maker</option>
             </select>
           </div>
@@ -455,7 +468,7 @@
       <!-- CONTACT 4: ADMIN / INVOICING -->
       <div class="contact-card">
         <div class="contact-card-hdr">
-          <span>Contact 4 — Admin / Invoicing</span>
+          <span>Contact 4 — Admin / Invoicing Contact</span>
           <span class="linked-badge" id="c4LinkedBadge"></span>
         </div>
         <div class="contact-card-body">
@@ -463,9 +476,9 @@
             <label>Same as:</label>
             <select id="c4SameAs" onchange="applySameAs(4,this.value)">
               <option value="">— Fill independently —</option>
-              <option value="1">Contact 1 — Business / Site Contact</option>
+              <option value="1">Contact 1 — Site Contact</option>
               <option value="2">Contact 2 — Key Decision Maker</option>
-              <option value="3">Contact 3 — Logistics</option>
+              <option value="3">Contact 3 — Logistics Contact</option>
             </select>
           </div>
           <div class="field-row">
@@ -494,7 +507,7 @@
       <!-- CONTACT 5: OTHER -->
       <div class="contact-card">
         <div class="contact-card-hdr">
-          <span>Contact 5 — Other</span>
+          <span>Contact 5 — Other Contact</span>
           <span class="linked-badge" id="c5LinkedBadge"></span>
         </div>
         <div class="contact-card-body">
@@ -502,10 +515,10 @@
             <label>Same as:</label>
             <select id="c5SameAs" onchange="applySameAs(5,this.value)">
               <option value="">— Fill independently —</option>
-              <option value="1">Contact 1 — Business / Site Contact</option>
+              <option value="1">Contact 1 — Site Contact</option>
               <option value="2">Contact 2 — Key Decision Maker</option>
-              <option value="3">Contact 3 — Logistics</option>
-              <option value="4">Contact 4 — Admin / Invoicing</option>
+              <option value="3">Contact 3 — Logistics Contact</option>
+              <option value="4">Contact 4 — Admin / Invoicing Contact</option>
             </select>
           </div>
           <div class="field-group" style="margin-bottom:10px;">
@@ -570,6 +583,22 @@
           <input type="text" id="estVolume" placeholder="">
         </div>
       </div>
+
+      <div class="field-row">
+        <div class="field-group">
+          <label class="field-label">Estimated Current Price</label>
+          <input type="text" id="estCurrentPrice" placeholder="e.g. 85cpl or $1.10/L">
+        </div>
+      </div>
+
+      <div class="yn-item" id="yn-distributor" style="margin-top:6px;">
+        <div class="yn-question">Is this a distributor / reseller site? <span style="font-size:11px;color:var(--gray-mid);">(Select No for internal usage)</span></div>
+        <div class="yn-controls">
+          <button class="yn-btn" onclick="setOpportunityYN('distributor','Y')">Y</button>
+          <button class="yn-btn" onclick="setOpportunityYN('distributor','N')">N</button>
+        </div>
+      </div>
+      <input type="hidden" id="isDistributor">
 
     </div>
   </div>
@@ -696,11 +725,29 @@ function setInterest(val) {
 }
 
 // =====================================================================
+// OPPORTUNITY Y/N — Is Distributor / Reseller
+// =====================================================================
+function setOpportunityYN(key, val) {
+  const hiddenMap = { distributor: 'isDistributor' };
+  const hiddenEl = document.getElementById(hiddenMap[key]);
+  if (hiddenEl) hiddenEl.value = val;
+  const item = document.getElementById('yn-' + key);
+  if (item) {
+    item.querySelectorAll('.yn-btn').forEach(b => {
+      b.classList.remove('active-y','active-n');
+      if (b.textContent === 'Y' && val === 'Y') b.classList.add('active-y');
+      if (b.textContent === 'N' && val === 'N') b.classList.add('active-n');
+    });
+  }
+  updateProgress();
+}
+
+// =====================================================================
 // CONTACTS — SAME AS LINKING (Contacts 2–5)
 // =====================================================================
 const CONTACT_LABELS = {
-  1:'Business / Site Contact', 2:'Key Decision Maker',
-  3:'Logistics', 4:'Admin / Invoicing', 5:'Other'
+  1:'Site Contact', 2:'Key Decision Maker',
+  3:'Logistics Contact', 4:'Admin / Invoicing Contact', 5:'Other Contact'
 };
 
 function applySameAs(targetNum, sourceNum) {
@@ -902,7 +949,7 @@ function collectData() {
     state:            g('state'),
     postcode:         g('postcode'),
     // 5 structured contacts
-    c1: contact(1), // Business / Site Contact
+    c1: contact(1), // Site Contact
     c2: contact(2), // Key Decision Maker
     c3: contact(3), // Logistics
     c4: contact(4), // Admin / Invoicing
@@ -915,6 +962,9 @@ function collectData() {
     productInterest: productInterest,
     currentSupplier: g('currentSupplier'),
     estVolume:       g('estVolume'),
+    estCurrentPrice: g('estCurrentPrice'),
+    isDistributor:   g('isDistributor'),
+    podEmail:        g('podEmail'),
     convNotes:       g('convNotes'),
     followupDate:    g('followupDate'),
     followupAction:  g('followupAction'),
@@ -1132,7 +1182,7 @@ function drawStdHeader(doc, d, formLabel, MC, ML) {
   doc.setFont('helvetica','normal');doc.setFontSize(7.5);doc.setTextColor(...BLK);
   doc.text(addr.substring(0,65),bm,by+26);
   divL(by+28.5);
-  lbl('BUSINESS CONTACT',bm,by+31.5);
+  lbl('SITE CONTACT',bm,by+31.5);
   const bizN=(d.c1?.name||d.contactName||d.siteContact||d.bizContactName||'—');
   doc.setFont('helvetica','bold');doc.setFontSize(7.5);doc.setTextColor(...BLK);
   doc.text(bizN.substring(0,28),bm,by+35.5);
@@ -1167,7 +1217,8 @@ async function generatePDF(returnDoc=false, presetData=null) {
 
   // S2
   secHdr('2. CONTACTS');
-  twoRow('Business Contact',d.c1?.name||d.contactName,'Title / Role',d.c1?.role||d.contactRole);
+  if (d.podEmail) fRow('Proof of Delivery (POD) Email',d.podEmail);
+  twoRow('Site Contact',d.c1?.name||d.contactName,'Title / Role',d.c1?.role||d.contactRole);
   twoRow('Phone',d.c1?.phone||d.contactMobile,'Email',d.c1?.email||d.contactEmail);
   if (d.c2?.name) {
     twoRow('Key Decision Maker',d.c2.name,'Title / Role',d.c2.role||'—');
@@ -1189,7 +1240,8 @@ async function generatePDF(returnDoc=false, presetData=null) {
   // S3
   secHdr('3. OPPORTUNITY');
   twoRow('Product Interest',d.productInterest||'—','Current Supplier',d.currentSupplier||'—');
-  fRow('Estimated Volume',d.estVolume||'—');
+  twoRow('Estimated Volume',d.estVolume||'—','Estimated Current Price',d.estCurrentPrice||'—');
+  if (d.isDistributor) fRow('Distributor / Reseller Site',d.isDistributor==='Y'?'Yes':'No');
 
   // S4
   secHdr('4. CONVERSATION');
@@ -1261,7 +1313,7 @@ function repairClientRecordsHeaders(wb) {
     'Is Distributor / Reseller','Additional Invoicing Emails','PO Required','PO Delivery Email',
     'BDM Email','Max Vehicle Size','Latest Note',
     'Prospect \u2713','Quote Sent \u2713','Site Admin \u2713','Site Audit \u2713','Pkg Assessment \u2713','Customer \u2713',
-    'Prospect Doc #','Admin Doc #','Audit Doc #','Packaged Doc #','Quote Doc #',
+    'Prospect Doc #','Admin Doc #','Audit Doc #','Packaged Doc #','Quote Doc #','Record Status',
     'Drive Folder ID','Created Date','Created By','Notes Log'
   ];
   const rows = XLSX.utils.sheet_to_json(ws, { header:1 });
@@ -1323,7 +1375,7 @@ async function createClientRecord(d, folderId, existingClientId) {
   set('Suburb',        d.suburb);
   set('State',         d.state);
   set('Postcode',      d.postcode);
-  // Contact 1 — Business / Site Contact
+  // Contact 1 — Site Contact
   set('Business Contact Name',  d.c1.name);
   set('Business Contact Role',  d.c1.role);
   set('Business Contact Email', d.c1.email);
@@ -1356,6 +1408,20 @@ async function createClientRecord(d, folderId, existingClientId) {
   set('Contact Email', d.c1.email);
   set('Prospect ✓',   '✓');
   set('Prospect Doc #', docCount);
+  // Opportunity
+  set('Product Interest',   d.productInterest);
+  set('Current Supplier',   d.currentSupplier);
+  set('Estimated Volume',   d.estVolume);
+  set('Estimated Current Price', d.estCurrentPrice);
+  set('Is Distributor / Reseller', d.isDistributor);
+  // Shared cross-form fields
+  set('POD Email', d.podEmail);
+  set('BDM Email', d.bdmEmail);
+  // Latest Note — snapshot of most recent conversation note (overwritten each time)
+  if (d.convNotes && d.convNotes.trim()) set('Latest Note', d.convNotes.trim());
+  // Record Status — only set on brand-new records; never overwrite on update
+  // (preserves "Client" status if Admin/Audit/Packaged already converted this record)
+  if (!isUpdate) set('Record Status', 'Prospect');
 
   if (isUpdate) {
     // Preserve original creation metadata; append to Notes Log rather than overwrite
@@ -1633,14 +1699,14 @@ function confirmClear() {
   if (confirm('Clear all form data?')) { clearAll(); showToast('✅ Form cleared'); }
 }
 function clearAll() {
-  ['billingEntity','siteLocationName','generatedSiteName','companyName','prospectDate',
+  ['billingEntity','siteLocationName','generatedSiteName','trackpodName','companyName','prospectDate',
    'siteAddress','suburb','postcode',
    'c1Name','c1Role','c1Email','c1Phone',
    'c2Name','c2Role','c2Email','c2Phone',
    'c3Name','c3Role','c3Email','c3Phone',
    'c4Name','c4Role','c4Email','c4Phone',
    'c5Label','c5Name','c5Role','c5Email','c5Phone',
-   'currentSupplier','estVolume','convNotes',
+   'podEmail','currentSupplier','estVolume','estCurrentPrice','isDistributor','convNotes',
    'followupDate','followupAction','bdmEmail'].forEach(id => {
     const el = document.getElementById(id);
     if (el) { el.value=''; el.readOnly=false; el.classList.remove('linked'); }
@@ -1650,6 +1716,9 @@ function clearAll() {
     const sel = document.getElementById(`c${n}SameAs`); if(sel) sel.selectedIndex=0;
     const badge = document.getElementById(`c${n}LinkedBadge`); if(badge) badge.style.display='none';
   });
+  // Reset Is Distributor Y/N visual state
+  const distItem = document.getElementById('yn-distributor');
+  if (distItem) distItem.querySelectorAll('.yn-btn').forEach(b => b.classList.remove('active-y','active-n'));
   document.getElementById('state').selectedIndex = 0;
   document.getElementById('descriptor').selectedIndex = 0;
   document.getElementById('bdmName').selectedIndex = 0;
@@ -1798,7 +1867,9 @@ async function fetchClientDetails(clientId) {
       postcode:          get('Postcode'),
       currentSupplier:   get('Current Supplier'),
       estVolume:         get('Estimated Volume'),
-      // Contact 1 — Business / Site Contact
+      estCurrentPrice:   get('Estimated Current Price'),
+      podEmail:          get('POD Email'),
+      // Contact 1 — Site Contact
       c1Name:  get('Business Contact Name')  || get('Contact Name'),
       c1Role:  get('Business Contact Role')  || get('Contact Title'),
       c1Email: get('Business Contact Email') || get('Contact Email'),
@@ -1840,6 +1911,9 @@ async function fetchClientDetails(clientId) {
     // Product Interest uses a pill-button group, not a plain input — set via its own handler
     const _productInterestVal = get('Product Interest');
     if (_productInterestVal) setInterest(_productInterestVal);
+
+    const _isDistributorVal = get('Is Distributor / Reseller');
+    if (_isDistributorVal) setOpportunityYN('distributor', _isDistributorVal);
 
     const stateVal = get('State');
     const stateEl  = document.getElementById('state');
@@ -2039,7 +2113,7 @@ async function getAdminSheetId(rootFolderId) {
     'Is Distributor / Reseller','Additional Invoicing Emails','PO Required','PO Delivery Email',
     'BDM Email','Max Vehicle Size','Latest Note',
     'Prospect \u2713','Quote Sent \u2713','Site Admin \u2713','Site Audit \u2713','Pkg Assessment \u2713','Customer \u2713',
-    'Prospect Doc #','Admin Doc #','Audit Doc #','Packaged Doc #','Quote Doc #',
+    'Prospect Doc #','Admin Doc #','Audit Doc #','Packaged Doc #','Quote Doc #','Record Status',
     'Drive Folder ID','Created Date','Created By','Notes Log'
   ];
   const wb = XLSX.utils.book_new();
@@ -2170,7 +2244,7 @@ function populateFromSnapshot(d) {
   sv('suburb',      d.suburb);
   sv('siteAddress', d.siteAddress);
   sv('postcode',    d.postcode);
-  // Contact 1 — Business / Site Contact (fall back to legacy columns)
+  // Contact 1 — Site Contact (fall back to legacy columns)
   sv('c1Name',  d.c1?.name  || d['Business Contact Name']  || d.contactName);
   sv('c1Role',  d.c1?.role  || d['Business Contact Role']  || d.contactRole);
   sv('c1Email', d.c1?.email || d['Business Contact Email'] || d.contactEmail);
