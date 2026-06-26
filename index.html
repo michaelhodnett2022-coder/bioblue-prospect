@@ -146,7 +146,7 @@
     <div style="font-size:20px;">🏢</div>
     <div style="flex:1;">
       <div style="font-size:11px;font-weight:700;color:#7c3aed;text-transform:uppercase;letter-spacing:0.5px;">Active Client</div>
-      <div style="font-size:14px;font-weight:700;color:#1f2937;" id="bannerClientName">Active Client Ready to Load</div>
+      <div style="font-size:14px;font-weight:700;color:#1f2937;" id="bannerClientName">Tap below to load full details</div>
       <div style="font-size:11px;color:#6b7280;" id="bannerClientId"></div>
     </div>
     <a href="https://michaelhodnett2022-coder.github.io/bioblue-field-tools" style="font-size:11px;font-weight:600;color:#7c3aed;text-decoration:none;
@@ -286,6 +286,7 @@
           <label class="field-label">Generated Site Name <span style="font-weight:400;font-size:10px;">(locked)</span></label>
           <input type="text" id="generatedSiteName" readonly placeholder="Fill fields above to generate name..."
             style="background:#f0f0ff;border-color:var(--purple-light);color:var(--purple-dark);font-weight:700;cursor:default;">
+          <div id="siteNameCharCount" style="font-size:11px;margin-top:4px;color:var(--gray-mid);"></div>
         </div>
 
         <div class="field-group" style="margin-top:10px;">
@@ -787,12 +788,38 @@ function generateSiteName() {
   const suburb   = (document.getElementById('suburb')?.value||'').trim();
   const state    = document.getElementById('state')?.value||'';
   const out      = document.getElementById('generatedSiteName');
-  if (!billing||!suburb||!state) { if(out) out.value=''; return; }
+  const counter  = document.getElementById('siteNameCharCount');
+  if (!billing||!suburb||!state) {
+    if(out) out.value='';
+    if(counter) counter.textContent='';
+    window._siteNameTooLong = false;
+    return;
+  }
   // Build name — Site Location Name is optional; Descriptor never appears in the generated name
   const name = siteLoc
     ? billing+' – '+siteLoc+' ('+suburb+', '+state+')'
     : billing+' ('+suburb+', '+state+')';
-  if (out) { out.value=name; out.style.background='#ede9fe'; out.style.color='#5b21b6'; }
+  const len = name.length;
+
+  if (len > 50) {
+    window._siteNameTooLong = true;
+    if (out) {
+      out.value = '⚠️ Name too long — won\'t fit accounting system';
+      out.style.background = '#fee2e2'; out.style.color = '#b91c1c';
+    }
+    if (counter) {
+      counter.textContent = `${len}/50 characters — over limit. Shorten Billing Entity or Site Tag Name to continue.`;
+      counter.style.color = '#b91c1c'; counter.style.fontWeight = '700';
+    }
+  } else {
+    window._siteNameTooLong = false;
+    if (out) { out.value=name; out.style.background='#ede9fe'; out.style.color='#5b21b6'; }
+    if (counter) {
+      counter.textContent = `${len}/50 characters`;
+      counter.style.color = len > 40 ? '#b45309' : 'var(--gray-mid)';
+      counter.style.fontWeight = len > 40 ? '700' : '400';
+    }
+  }
   // Sync companyName for backward compat
   const cn = document.getElementById('companyName');
   if (cn) cn.value = billing;
@@ -1162,10 +1189,6 @@ function drawStdHeader(doc, d, formLabel, MC, ML) {
   const sn=(d.generatedSiteName||d.siteName||d.companyName||d.customerName||'').toUpperCase();
   doc.setFont('helvetica','bold');doc.setFontSize(11);doc.setTextColor(255,255,255);
   doc.text(doc.splitTextToSize(sn,cW-8)[0],margin+3,24);
-  if (d.trackpodName) {
-    doc.setFont('helvetica','normal');doc.setFontSize(6.5);doc.setTextColor(255,255,255);
-    doc.text('Site Name (Trackpod): '+d.trackpodName,margin+3,29);
-  }
   const by=33.5;doc.setFillColor(...ML);doc.rect(margin,by,cW,37,'F');
   const bm=margin+3,hw=(cW-8)/2;
   const lbl=(t,x,y)=>{doc.setFont('helvetica','normal');doc.setFontSize(5.5);doc.setTextColor(...MC);doc.text(t,x,y);};
@@ -1561,6 +1584,13 @@ async function uploadAndSend() {
   const d = collectData();
   if (!d.bdmName) { showToast('⚠️ Please select your name'); return; }
 
+  if (window._siteNameTooLong) {
+    showToast('⚠️ Generated Site Name is over 50 characters — shorten Billing Entity or Site Tag Name before submitting');
+    const out = document.getElementById('generatedSiteName');
+    if (out) out.scrollIntoView({ behavior:'smooth', block:'center' });
+    return;
+  }
+
   // ── UPDATE MODE — append conversation note, no PDF ──
   const _isUpdate = new URLSearchParams(window.location.search).get('mode') === 'update';
   if (_isUpdate) {
@@ -1788,7 +1818,7 @@ async function loadClientFromURL() {
     try {
       const _sessName = sessionStorage.getItem('bb_selected_client_name');
       const _nm = document.getElementById('bannerClientName');
-      if (_nm) _nm.textContent = _sessName || 'Active Client Ready to Load';
+      if (_nm) _nm.textContent = _sessName || 'Tap below to load full details';
     } catch(e) {}
   }
 
@@ -1904,7 +1934,19 @@ async function fetchClientDetails(clientId) {
 
     // Apply the same "generated" visual treatment as generateSiteName() does
     const _gsnEl = document.getElementById('generatedSiteName');
-    if (_gsnEl && _gsnEl.value) { _gsnEl.style.background = '#ede9fe'; _gsnEl.style.color = '#5b21b6'; }
+    const _counterEl = document.getElementById('siteNameCharCount');
+    if (_gsnEl && _gsnEl.value) {
+      const _len = _gsnEl.value.length;
+      if (_len > 50) {
+        window._siteNameTooLong = true;
+        _gsnEl.style.background = '#fee2e2'; _gsnEl.style.color = '#b91c1c';
+        if (_counterEl) { _counterEl.textContent = `${_len}/50 characters — over limit. Shorten Billing Entity or Site Tag Name to continue.`; _counterEl.style.color = '#b91c1c'; _counterEl.style.fontWeight = '700'; }
+      } else {
+        window._siteNameTooLong = false;
+        _gsnEl.style.background = '#ede9fe'; _gsnEl.style.color = '#5b21b6';
+        if (_counterEl) { _counterEl.textContent = `${_len}/50 characters`; _counterEl.style.color = _len > 40 ? '#b45309' : 'var(--gray-mid)'; _counterEl.style.fontWeight = _len > 40 ? '700' : '400'; }
+      }
+    }
     const _tpnEl = document.getElementById('trackpodName');
     if (_tpnEl && _tpnEl.value) { _tpnEl.style.background = '#ede9fe'; _tpnEl.style.color = '#5b21b6'; }
 
@@ -2141,7 +2183,7 @@ function showPrefillRetry(clientId) {
   const banner = document.getElementById('clientBanner');
   if (!banner) return;
   const _nm = document.getElementById('bannerClientName');
-  if (_nm) _nm.textContent = 'Active Client Ready to Load';
+  if (_nm) _nm.textContent = 'Tap below to load full details';
   let btn = document.getElementById('prefillRetryBtn');
   if (!btn) {
     btn = document.createElement('button');
