@@ -360,6 +360,16 @@
         <input type="email" id="podEmail" placeholder="e.g. pod@company.com.au">
         <div style="font-size:11px;color:var(--gray-mid);margin-top:4px;">Shared with Admin and Audit forms — fills automatically if already entered there</div>
       </div>
+
+      <div class="field-group" style="margin-bottom:14px;">
+        <label class="field-label">Additional POD Email <span style="font-weight:400;font-size:10px;">(optional)</span></label>
+        <input type="email" id="podEmail2" placeholder="e.g. pod2@company.com.au">
+      </div>
+
+      <div class="field-group" style="margin-bottom:14px;">
+        <label class="field-label">Additional POD Email <span style="font-weight:400;font-size:10px;">(optional)</span></label>
+        <input type="email" id="podEmail3" placeholder="e.g. pod3@company.com.au">
+      </div>
       <div style="border-top:1.5px solid var(--gray-light);margin-bottom:16px;"></div>
 
       <!-- CONTACT 1: BUSINESS / SITE CONTACT -->
@@ -683,6 +693,7 @@
   <div class="modal-box">
     <h3>✅ Prospect Submitted</h3>
     <p id="modalMsg"></p>
+    <div id="modalContactButtons"></div>
     <div class="modal-actions">
       <button class="btn-primary" onclick="closeModal()">Close</button>
       <button class="btn-primary" id="modalFieldToolsBtn" style="display:none;background:var(--purple-dark);"
@@ -992,6 +1003,8 @@ function collectData() {
     estCurrentPrice: g('estCurrentPrice'),
     isDistributor:   g('isDistributor'),
     podEmail:        g('podEmail'),
+    podEmail2:       g('podEmail2'),
+    podEmail3:       g('podEmail3'),
     convNotes:       g('convNotes'),
     followupDate:    g('followupDate'),
     followupAction:  g('followupAction'),
@@ -1129,12 +1142,12 @@ async function downloadPDF() {
 // =====================================================================
 // VCARD CONTACT
 // =====================================================================
-function generateVCard(d) {
-  if (!d.contactName && !d.c1?.name) return;
-  const vcfName   = d.c1?.name   || d.contactName;
-  const vcfRole   = d.c1?.role   || d.contactRole;
-  const vcfPhone  = d.c1?.phone  || d.contactMobile;
-  const vcfEmail  = d.c1?.email  || d.contactEmail;
+function generateVCard(contact, label, d) {
+  if (!contact?.name) return;
+  var vcfName  = contact.name;
+  var vcfRole  = contact.role;
+  var vcfPhone = contact.phone;
+  var vcfEmail = contact.email;
   var nameParts = vcfName.split(' ');
   var firstName = nameParts[0] || '';
   var lastName  = nameParts.slice(1).join(' ') || '';
@@ -1150,7 +1163,7 @@ function generateVCard(d) {
     (d.siteAddress||d.suburb||d.state||d.postcode)
       ? ('ADR;TYPE=WORK:;;' + (d.siteAddress||'') + ';' + (d.suburb||'') + ';' + (d.state||'') + ';' + (d.postcode||'') + ';Australia')
       : '',
-    'NOTE:BioBlue prospect. Added by ' + d.bdmName + ' on ' + d.prospectDate,
+    'NOTE:BioBlue ' + (label||'contact') + '. Added by ' + d.bdmName + ' on ' + d.prospectDate,
     'END:VCARD'
   ].filter(Boolean).join('\r\n');
   var blob = new Blob([lines], { type: 'text/vcard;charset=utf-8' });
@@ -1160,6 +1173,32 @@ function generateVCard(d) {
   a.download = vcfName.replace(/\s+/g, '_') + '.vcf';
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   setTimeout(function(){ URL.revokeObjectURL(url); }, 10000);
+}
+
+// Builds the "Save to Phone" button list shown in the success modal —
+// one button per contact that was actually filled in, each triggering its
+// own vCard download directly on tap (a real user gesture, not a timer-
+// deferred background trigger, which mobile browsers can silently block).
+function buildContactSaveButtons(d) {
+  const slots = [
+    { c: d.c1, label: 'Site Contact' },
+    { c: d.c2, label: 'Key Decision Maker' },
+    { c: d.c3, label: 'Logistics Contact' },
+    { c: d.c4, label: 'Admin / Invoicing Contact' },
+    { c: d.c5, label: d.c5?.label || 'Other Contact' },
+  ];
+  window._modalContactData = d;
+  window._modalContactSlots = slots;
+  const wrap = document.getElementById('modalContactButtons');
+  if (!wrap) return;
+  const filled = slots.map((s, i) => ({ ...s, idx: i })).filter(s => s.c?.name);
+  if (!filled.length) { wrap.innerHTML = ''; return; }
+  wrap.innerHTML = '<div style="font-size:11px;font-weight:700;color:var(--gray-mid);text-transform:uppercase;letter-spacing:0.4px;margin:14px 0 6px;">Save Contacts to Phone</div>' +
+    filled.map(s => `
+      <button class="btn-primary" style="width:100%;margin-bottom:6px;display:flex;justify-content:center;gap:6px;"
+        onclick="generateVCard(window._modalContactSlots[${s.idx}].c, window._modalContactSlots[${s.idx}].label, window._modalContactData)">
+        📇 Save ${s.label} — ${s.c.name}
+      </button>`).join('');
 }
 
 
@@ -1241,6 +1280,8 @@ async function generatePDF(returnDoc=false, presetData=null) {
   // S2
   secHdr('2. CONTACTS');
   if (d.podEmail) fRow('Proof of Delivery (POD) Email',d.podEmail);
+  if (d.podEmail2) fRow('Additional POD Email',d.podEmail2);
+  if (d.podEmail3) fRow('Additional POD Email',d.podEmail3);
   twoRow('Site Contact',d.c1?.name||d.contactName,'Title / Role',d.c1?.role||d.contactRole);
   twoRow('Phone',d.c1?.phone||d.contactMobile,'Email',d.c1?.email||d.contactEmail);
   if (d.c2?.name) {
@@ -1330,7 +1371,7 @@ function repairClientRecordsHeaders(wb) {
     'Logistics Name','Logistics Role','Logistics Email','Logistics Phone',
     'Admin Contact Name','Admin Contact Role','Admin Contact Email','Admin Contact Phone',
     'Other Contact Label','Other Contact Name','Other Contact Role','Other Contact Email','Other Contact Phone',
-    'POD Email',
+    'POD Email','POD Email 2','POD Email 3',
     'Contact Name','Contact Title','Contact Mobile','Contact Email',
     'Product Interest','Current Supplier','Estimated Volume','Estimated Current Price','Active Products',
     'Is Distributor / Reseller','Additional Invoicing Emails','PO Required','PO Delivery Email',
@@ -1439,6 +1480,8 @@ async function createClientRecord(d, folderId, existingClientId) {
   set('Is Distributor / Reseller', d.isDistributor);
   // Shared cross-form fields
   set('POD Email', d.podEmail);
+  set('POD Email 2', d.podEmail2);
+  set('POD Email 3', d.podEmail3);
   set('BDM Email', d.bdmEmail);
   // Latest Note — snapshot of most recent conversation note (overwritten each time)
   if (d.convNotes && d.convNotes.trim()) set('Latest Note', d.convNotes.trim());
@@ -1566,6 +1609,8 @@ async function appendConversationNote(d) {
       sendCalendarInvite(d);
     }
 
+    const _noteModalBtns = document.getElementById('modalContactButtons');
+    if (_noteModalBtns) _noteModalBtns.innerHTML = '';
     document.getElementById('modalMsg').textContent =
       `✅ Conversation log updated!\n\n🏢 ${billingName || clientId}\n🕐 ${timestamp}\n📝 ${d.bdmName}\n\n${d.convNotes.trim()}` +
       (d.followupDate ? `\n\n📅 Follow-up: ${d.followupDate}${d.followupAction ? ' — ' + d.followupAction : ''}` : '');
@@ -1688,18 +1733,19 @@ async function uploadAndSend() {
       sendCalendarInvite(d);
     }
 
-    // Generate vCard contact
-    if (d.contactName) {
-      showToast('👤 Generating contact...');
-      setTimeout(() => generateVCard(d), 800);
-    }
+    // Build "Save to Phone" buttons for every contact that was filled in —
+    // replaces the old auto-triggered single-contact download, which mobile
+    // browsers can silently block since it wasn't a direct user gesture
+    buildContactSaveButtons(d);
 
-    document.getElementById('modalMsg').textContent = `✅ Prospect ${isUpdate?'updated':'submitted'}!\n\n🆔 Document Ref: ${d.docRef}\n☁️ PDF ${existingFileId?'updated':'uploaded'} to Google Drive\n📊 Client record ${isUpdate?'updated':'created'} — Prospect ✓${d.followupDate ? '\n📅 Calendar invite sent to '+d.bdmEmail : ''}${d.contactName ? '\n👤 Contact card ready to save' : ''}`;
+    document.getElementById('modalMsg').textContent = `✅ Prospect ${isUpdate?'updated':'submitted'}!\n\n🆔 Document Ref: ${d.docRef}\n☁️ PDF ${existingFileId?'updated':'uploaded'} to Google Drive\n📊 Client record ${isUpdate?'updated':'created'} — Prospect ✓${d.followupDate ? '\n📅 Calendar invite sent to '+d.bdmEmail : ''}`;
     redirectToFieldTools(newId||'');
     document.getElementById('modal').classList.add('active');
 
   } catch(e) {
     gdriveToken = null;
+    const wrap = document.getElementById('modalContactButtons');
+    if (wrap) wrap.innerHTML = '';
     document.getElementById('modalMsg').textContent = `⚠️ Save failed: ${e.message}\n\nPlease try again.`;
     document.getElementById('modal').classList.add('active');
   }
@@ -1736,7 +1782,7 @@ function clearAll() {
    'c3Name','c3Role','c3Email','c3Phone',
    'c4Name','c4Role','c4Email','c4Phone',
    'c5Label','c5Name','c5Role','c5Email','c5Phone',
-   'podEmail','currentSupplier','estVolume','estCurrentPrice','isDistributor','convNotes',
+   'podEmail','podEmail2','podEmail3','currentSupplier','estVolume','estCurrentPrice','isDistributor','convNotes',
    'followupDate','followupAction','bdmEmail'].forEach(id => {
     const el = document.getElementById(id);
     if (el) { el.value=''; el.readOnly=false; el.classList.remove('linked'); }
@@ -1757,7 +1803,11 @@ function clearAll() {
   updateProgress();
 }
 function toggleSection(id) { const b=document.getElementById(id),t=document.getElementById('toggle-'+id); if(!b)return; const c=b.classList.toggle('collapsed'); if(t)t.textContent=c?'▶':'▼'; }
-function closeModal() { document.getElementById('modal').classList.remove('active'); }
+function closeModal() {
+  document.getElementById('modal').classList.remove('active');
+  const wrap = document.getElementById('modalContactButtons');
+  if (wrap) wrap.innerHTML = '';
+}
 function showToast(msg) { const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2500); }
 
 // INIT
@@ -1899,6 +1949,8 @@ async function fetchClientDetails(clientId) {
       estVolume:         get('Estimated Volume'),
       estCurrentPrice:   get('Estimated Current Price'),
       podEmail:          get('POD Email'),
+      podEmail2:         get('POD Email 2'),
+      podEmail3:         get('POD Email 3'),
       // Contact 1 — Site Contact
       c1Name:  get('Business Contact Name')  || get('Contact Name'),
       c1Role:  get('Business Contact Role')  || get('Contact Title'),
@@ -2149,7 +2201,7 @@ async function getAdminSheetId(rootFolderId) {
     'Logistics Name','Logistics Role','Logistics Email','Logistics Phone',
     'Admin Contact Name','Admin Contact Role','Admin Contact Email','Admin Contact Phone',
     'Other Contact Label','Other Contact Name','Other Contact Role','Other Contact Email','Other Contact Phone',
-    'POD Email',
+    'POD Email','POD Email 2','POD Email 3',
     'Contact Name','Contact Title','Contact Mobile','Contact Email',
     'Product Interest','Current Supplier','Estimated Volume','Estimated Current Price','Active Products',
     'Is Distributor / Reseller','Additional Invoicing Emails','PO Required','PO Delivery Email',
