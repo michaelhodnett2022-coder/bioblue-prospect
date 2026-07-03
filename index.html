@@ -1523,7 +1523,8 @@ async function createClientRecord(d, folderId, existingClientId) {
   const form = new FormData();
   form.append('metadata', new Blob([JSON.stringify({})], { type:'application/json' }));
   form.append('file', blob, CLIENT_RECORDS_NAME);
-  await fetch(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=multipart`, { method:'PATCH', headers:{ Authorization:`Bearer ${gdriveToken}` }, body:form });
+  const _upRes = await fetch(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=multipart`, { method:'PATCH', headers:{ Authorization:`Bearer ${gdriveToken}` }, body:form });
+  if (!_upRes.ok) throw new Error(`Client record save failed (${_upRes.status})`);
   return { newId, docCount, isUpdate };
 }
 
@@ -1717,15 +1718,22 @@ async function uploadAndSend() {
       form.append('file', pdfBlob, baseName+'.pdf');
       up = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink', { method:'POST', headers:{ Authorization:`Bearer ${gdriveToken}` }, body:form });
     }
+    if (!up.ok) throw new Error(`PDF upload failed (${up.status}) — Drive session may have expired, try reloading`);
     const uploaded = await up.json();
+    if (!uploaded.id) throw new Error('PDF upload returned no file ID');
 
-    // Save folder ID to client record for other forms to use
-    if (newId && clientFolderId) {
-      await saveClientFolderIdToRecord(folderId, newId, clientFolderId);
+    // Save folder ID to client record for other forms to use, and the form snapshot —
+    // non-fatal individually, but surfaced distinctly since the PDF has already landed
+    let _followUpWarning = '';
+    try {
+      if (newId && clientFolderId) {
+        await saveClientFolderIdToRecord(folderId, newId, clientFolderId);
+      }
+      await saveFormSnapshot(d, clientFolderId);
+    } catch(followErr) {
+      console.error('Post-upload save failed:', followErr);
+      _followUpWarning = `\n\n⚠️ Follow-up save failed: ${followErr.message}\n(PDF is safe on Drive — but folder linkage or snapshot may be incomplete)`;
     }
-
-    // Save form snapshot for future reload/edit
-    await saveFormSnapshot(d, clientFolderId);
 
     // Send calendar invite if follow-up date set
     if (d.followupDate) {
@@ -1738,7 +1746,7 @@ async function uploadAndSend() {
     // browsers can silently block since it wasn't a direct user gesture
     buildContactSaveButtons(d);
 
-    document.getElementById('modalMsg').textContent = `✅ Prospect ${isUpdate?'updated':'submitted'}!\n\n🆔 Document Ref: ${d.docRef}\n☁️ PDF ${existingFileId?'updated':'uploaded'} to Google Drive\n📊 Client record ${isUpdate?'updated':'created'} — Prospect ✓${d.followupDate ? '\n📅 Calendar invite sent to '+d.bdmEmail : ''}`;
+    document.getElementById('modalMsg').textContent = `✅ Prospect ${isUpdate?'updated':'submitted'}!\n\n🆔 Document Ref: ${d.docRef}\n☁️ PDF ${existingFileId?'updated':'uploaded'} to Google Drive\n📊 Client record ${isUpdate?'updated':'created'} — Prospect ✓${d.followupDate ? '\n📅 Calendar invite sent to '+d.bdmEmail : ''}${_followUpWarning}`;
     redirectToFieldTools(newId||'');
     document.getElementById('modal').classList.add('active');
 
@@ -2061,6 +2069,7 @@ async function getOrCreateClientFolder(parentFolderId, folderName) {
     `https://www.googleapis.com/drive/v3/files?q=name='${folderName.replace(/'/g,"\\'")}' and '${parentFolderId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false&fields=files(id,name)`,
     { headers: { Authorization: `Bearer ${gdriveToken}` } }
   );
+  if (!searchRes.ok) throw new Error(`Folder search failed (${searchRes.status}) — Drive session may have expired, try reloading`);
   const searchData = await searchRes.json();
   if (searchData.files && searchData.files.length > 0) {
     return searchData.files[0].id;
@@ -2071,7 +2080,9 @@ async function getOrCreateClientFolder(parentFolderId, folderName) {
     headers: { Authorization: `Bearer ${gdriveToken}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ name: folderName, mimeType: 'application/vnd.google-apps.folder', parents: [parentFolderId] })
   });
+  if (!createRes.ok) throw new Error(`Folder creation failed (${createRes.status}) — Drive session may have expired, try reloading`);
   const created = await createRes.json();
+  if (!created.id) throw new Error('Folder creation returned no ID');
   return created.id;
 }
 
@@ -2258,31 +2269,32 @@ let _snapshotFileId = null;
 
 async function saveFormSnapshot(d, clientFolderId) {
   if (!gdriveToken || !clientFolderId) return;
-  try {
-    const clientId = new URLSearchParams(window.location.search).get('client');
-    if (!clientId) return;
-    const fileName = `BB_${SNAPSHOT_FORM_TYPE}_${clientId}.json`;
-    const snapshot = { ...d, _snapshotSavedAt: new Date().toISOString(), _clientId: clientId };
-    const blob = new Blob([JSON.stringify(snapshot, null, 2)], { type: 'application/json' });
-    const sr = await fetch(
-      `https://www.googleapis.com/drive/v3/files?q=name='${fileName}' and '${clientFolderId}' in parents and trashed=false&fields=files(id)`,
-      { headers: { Authorization: `Bearer ${gdriveToken}` } }
-    );
-    const sd = await sr.json();
-    const fm = new FormData();
-    if (sd.files && sd.files.length) {
-      fm.append('metadata', new Blob([JSON.stringify({})], { type: 'application/json' }));
-      fm.append('file', blob, fileName);
-      await fetch(`https://www.googleapis.com/upload/drive/v3/files/${sd.files[0].id}?uploadType=multipart`,
-        { method: 'PATCH', headers: { Authorization: `Bearer ${gdriveToken}` }, body: fm });
-    } else {
-      fm.append('metadata', new Blob([JSON.stringify({ name: fileName, parents: [clientFolderId] })], { type: 'application/json' }));
-      fm.append('file', blob, fileName);
-      await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',
-        { method: 'POST', headers: { Authorization: `Bearer ${gdriveToken}` }, body: fm });
-    }
-    console.log('✅ Prospect snapshot saved:', fileName);
-  } catch(e) { console.warn('Snapshot save failed:', e.message); }
+  const clientId = new URLSearchParams(window.location.search).get('client');
+  if (!clientId) return;
+  const fileName = `BB_${SNAPSHOT_FORM_TYPE}_${clientId}.json`;
+  const snapshot = { ...d, _snapshotSavedAt: new Date().toISOString(), _clientId: clientId };
+  const blob = new Blob([JSON.stringify(snapshot, null, 2)], { type: 'application/json' });
+  const sr = await fetch(
+    `https://www.googleapis.com/drive/v3/files?q=name='${fileName}' and '${clientFolderId}' in parents and trashed=false&fields=files(id)`,
+    { headers: { Authorization: `Bearer ${gdriveToken}` } }
+  );
+  if (!sr.ok) throw new Error(`Snapshot lookup failed (${sr.status})`);
+  const sd = await sr.json();
+  const fm = new FormData();
+  if (sd.files && sd.files.length) {
+    fm.append('metadata', new Blob([JSON.stringify({})], { type: 'application/json' }));
+    fm.append('file', blob, fileName);
+    const pr = await fetch(`https://www.googleapis.com/upload/drive/v3/files/${sd.files[0].id}?uploadType=multipart`,
+      { method: 'PATCH', headers: { Authorization: `Bearer ${gdriveToken}` }, body: fm });
+    if (!pr.ok) throw new Error(`Snapshot update failed (${pr.status})`);
+  } else {
+    fm.append('metadata', new Blob([JSON.stringify({ name: fileName, parents: [clientFolderId] })], { type: 'application/json' }));
+    fm.append('file', blob, fileName);
+    const cr = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',
+      { method: 'POST', headers: { Authorization: `Bearer ${gdriveToken}` }, body: fm });
+    if (!cr.ok) throw new Error(`Snapshot creation failed (${cr.status})`);
+  }
+  console.log('✅ Prospect snapshot saved:', fileName);
 }
 
 async function checkForSnapshot(rootFolderId, clientId) {
