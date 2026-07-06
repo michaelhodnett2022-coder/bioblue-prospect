@@ -1,1 +1,2393 @@
-Data update
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="BioBlue Prospect">
+<title>BioBlue Prospect / Client Form</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBb-EHe4hw-UmY9xFNRDMwbf-A27S2WbPQ&libraries=places" async defer></script>
+<style>
+  :root {
+    --purple:#7c3aed;--purple-dark:#5b21b6;--purple-mid:#8b5cf6;
+    --purple-light:#ede9fe;--purple-pale:#f5f3ff;
+    --green:#00875a;--green-light:#e3f5ee;
+    --red:#c0392b;--red-light:#fdecea;
+    --gray-dark:#2c3e50;--gray-mid:#6b7280;--gray-light:#e5e7eb;--gray-pale:#f9fafb;
+    --shadow:0 2px 12px rgba(91,33,182,0.10);--shadow-lg:0 8px 32px rgba(91,33,182,0.18);
+    --radius:12px;--radius-sm:8px;
+  }
+  * { box-sizing:border-box;margin:0;padding:0; }
+  body { font-family:'DM Sans',sans-serif;background:#f0f4f8;color:var(--gray-dark);min-height:100vh;-webkit-font-smoothing:antialiased; }
+
+  .app-header { background:linear-gradient(135deg,var(--purple-dark) 0%,var(--purple) 100%);color:white;padding:20px 20px 16px;position:sticky;top:0;z-index:100;box-shadow:var(--shadow-lg); }
+  .header-top { display:flex;align-items:center;justify-content:space-between;margin-bottom:8px; }
+  .logo-badge { background:rgba(255,255,255,0.2);border-radius:8px;padding:6px 10px;font-family:'DM Mono',monospace;font-size:13px;font-weight:500;letter-spacing:1px;color:#ddd6fe; }
+  .header-title { font-size:17px;font-weight:700; }
+  .header-subtitle { font-size:12px;opacity:0.7;font-weight:300; }
+  .progress-bar-wrap { background:rgba(255,255,255,0.15);border-radius:4px;height:5px;overflow:hidden;margin-top:10px; }
+  .progress-bar-fill { height:100%;background:#c4b5fd;border-radius:4px;transition:width 0.4s ease;width:0%; }
+  .progress-label { font-size:11px;opacity:0.7;margin-top:4px;text-align:right; }
+
+  .main-content { max-width:820px;margin:0 auto;padding:20px 16px 100px; }
+
+  .section-card { background:white;border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:20px;overflow:hidden; }
+  .section-header { background:var(--purple-dark);color:white;padding:14px 20px;display:flex;align-items:center;gap:12px;cursor:pointer;user-select:none; }
+  .section-header-icon { background:rgba(255,255,255,0.2);border-radius:6px;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0; }
+  .section-header-text { flex:1; }
+  .section-header h2 { font-size:14px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase; }
+  .section-header p { font-size:11px;opacity:0.7;margin-top:1px; }
+  .section-toggle { font-size:18px;opacity:0.7; }
+  .section-body { padding:20px; }
+  .section-body.collapsed { display:none; }
+
+  .field-row { display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px; }
+  .field-row.full { grid-template-columns:1fr; }
+  .field-row.three { grid-template-columns:1fr 1fr 1fr; }
+  @media(max-width:520px) { .field-row,.field-row.three { grid-template-columns:1fr; } }
+  .field-group { display:flex;flex-direction:column;gap:5px; }
+  .field-label { font-size:12px;font-weight:600;color:var(--gray-mid);text-transform:uppercase;letter-spacing:0.4px; }
+  .field-label.required::after { content:' *';color:var(--red); }
+
+  input[type="text"],input[type="email"],input[type="tel"],input[type="date"],input[type="number"],textarea,select {
+    width:100%;padding:10px 12px;border:1.5px solid var(--gray-light);border-radius:var(--radius-sm);
+    font-family:'DM Sans',sans-serif;font-size:14px;color:var(--gray-dark);background:var(--gray-pale);
+    transition:border-color 0.15s;-webkit-appearance:none;
+  }
+  input:focus,textarea:focus,select:focus { outline:none;border-color:var(--purple);box-shadow:0 0 0 3px rgba(124,58,237,0.12);background:white; }
+  textarea { resize:vertical;min-height:90px; }
+
+  /* PRODUCT INTEREST PILLS */
+  .pill-group { display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:4px; }
+  .pill-btn {
+    padding:12px 8px;border-radius:var(--radius-sm);border:2px solid var(--gray-light);
+    background:white;color:var(--gray-mid);font-family:'DM Sans',sans-serif;
+    font-size:13px;font-weight:600;cursor:pointer;text-align:center;
+    transition:all 0.15s;
+  }
+  .pill-btn.active-bulk { background:var(--purple-light);border-color:var(--purple);color:var(--purple-dark); }
+  .pill-btn.active-packaged { background:var(--green-light);border-color:var(--green);color:var(--green); }
+  .pill-btn.active-both { background:linear-gradient(135deg,var(--purple-light),var(--green-light));border-color:var(--purple);color:var(--purple-dark); }
+
+  /* FOLLOW-UP HIGHLIGHT */
+  .followup-card {
+    background:var(--purple-pale);border:2px solid var(--purple-light);
+    border-radius:var(--radius);padding:16px;margin-bottom:12px;
+  }
+  .followup-card .field-label { color:var(--purple-dark); }
+
+  /* STICKY FOOTER */
+  .sticky-footer { position:fixed;bottom:0;left:0;right:0;background:white;border-top:2px solid var(--purple-light);padding:10px 12px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;z-index:99;box-shadow:0 -4px 20px rgba(91,33,182,0.12); }
+  .sticky-footer .btn { padding:12px 8px;font-size:13px;font-weight:700;border-radius:var(--radius-sm);text-align:center;white-space:nowrap;width:100%;cursor:pointer;font-family:'DM Sans',sans-serif;border:none; }
+  .btn-clear { background:white;color:var(--red);border:2px solid var(--red)!important; }
+  .btn-dl { background:white;color:var(--purple-dark);border:2px solid var(--purple-dark)!important; }
+  .btn-submit { background:var(--purple-dark);color:white; }
+  .contact-card { border:1.5px solid var(--gray-light);border-radius:10px;overflow:hidden;margin-bottom:12px; }
+  .contact-card-hdr { background:var(--purple-pale);border-bottom:1.5px solid var(--purple-light);padding:10px 14px;display:flex;align-items:center;gap:8px; }
+  .contact-card-hdr span { font-size:11px;font-weight:700;color:var(--purple-dark);text-transform:uppercase;letter-spacing:0.5px; }
+  .contact-card-body { padding:14px 14px 4px; }
+  .yn-item { display:flex;align-items:flex-start;gap:12px;padding:11px 14px;border-radius:var(--radius-sm);margin-bottom:6px;border:1.5px solid var(--purple-light);background:var(--purple-pale); }
+  .yn-question { flex:1;font-size:13.5px;line-height:1.4;padding-top:2px;color:var(--gray-dark); }
+  .yn-controls { display:flex;gap:6px;flex-shrink:0; }
+  .yn-btn { padding:5px 12px;border-radius:6px;border:1.5px solid var(--gray-light);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;background:white;color:var(--gray-mid); }
+  .yn-btn.active-y { background:var(--green,#16a34a);border-color:var(--green,#16a34a);color:white; }
+  .yn-btn.active-n { background:var(--gray-mid);border-color:var(--gray-mid);color:white; }
+  .same-as-wrap { display:flex;align-items:center;gap:8px;background:var(--gray-pale);border:1px solid var(--gray-light);border-radius:7px;padding:7px 10px;margin-bottom:10px; }
+  .same-as-wrap label { font-size:11px;font-weight:600;color:var(--gray-mid);white-space:nowrap; }
+  .same-as-wrap select { flex:1;font-size:12px;padding:4px 8px;border-radius:5px; }
+  .linked-badge { display:none;font-size:10px;font-weight:600;color:var(--purple-dark);background:var(--purple-pale);border:1px solid var(--purple-light);border-radius:20px;padding:2px 10px;margin-left:4px; }
+  input.linked { background:var(--purple-pale)!important;border-color:var(--purple-light)!important;color:var(--purple-dark)!important; }
+  .btn-submit:hover { background:var(--purple); }
+
+  .modal-overlay { display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:200;align-items:center;justify-content:center;padding:20px; }
+  .modal-overlay.active { display:flex; }
+  .modal-box { background:white;border-radius:var(--radius);padding:24px;max-width:420px;width:100%;box-shadow:var(--shadow-lg); }
+  .modal-box h3 { font-size:16px;margin-bottom:8px;color:var(--purple-dark); }
+  .modal-box p { font-size:13px;color:var(--gray-mid);margin-bottom:16px;white-space:pre-line; }
+  .modal-actions { display:flex;gap:8px;justify-content:flex-end; }
+  .btn-primary { background:var(--purple-dark);color:white;border:none;border-radius:var(--radius-sm);padding:9px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif; }
+
+  .toast { position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--gray-dark);color:white;padding:10px 20px;border-radius:30px;font-size:13px;font-weight:600;opacity:0;transition:all 0.3s;z-index:300;white-space:nowrap; }
+  .toast.show { opacity:1;transform:translateX(-50%) translateY(0); }
+
+  .address-field-wrap { position:relative; }
+  .gps-btn { position:absolute;right:8px;top:50%;transform:translateY(-50%);background:var(--purple);color:white;border:none;border-radius:6px;padding:5px 10px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap; }
+  .gps-status { font-size:11px;color:var(--purple);margin-top:3px;min-height:16px; }
+</style>
+</head>
+<body>
+
+<div class="app-header">
+  <div class="header-top">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <div class="logo-badge">BIOBLUE</div>
+      <div>
+        <a href="https://michaelhodnett2022-coder.github.io/bioblue-field-tools" style="display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.2);border-radius:8px;padding:4px 10px;font-size:11px;font-weight:600;color:rgba(255,255,255,0.8);text-decoration:none;margin-bottom:4px;">← Field Tools</a>
+        <div class="header-title">Prospect / Client Form</div>
+        <div class="header-subtitle">New &amp; Existing Clients · Lead Capture · CRM Data</div>
+      </div>
+    </div>
+    <button onclick="confirmClear()" style="background:rgba(255,255,255,0.15);color:white;border:1px solid rgba(255,255,255,0.3);border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">🗑️ Clear</button>
+  </div>
+  <div class="progress-bar-wrap"><div class="progress-bar-fill" id="progressBar"></div></div>
+  <div class="progress-label" id="progressLabel">0% complete</div>
+</div>
+
+<div class="main-content">
+  <!-- CLIENT BANNER -->
+  <div id="clientBanner" style="display:none;align-items:center;gap:12px;
+      background:#ede9fe;border:1.5px solid #7c3aed;
+      border-radius:10px;padding:12px 16px;margin:16px 16px 0;flex-wrap:wrap;">
+    <div style="font-size:20px;">🏢</div>
+    <div style="flex:1;">
+      <div style="font-size:11px;font-weight:700;color:#7c3aed;text-transform:uppercase;letter-spacing:0.5px;">Active Client</div>
+      <div style="font-size:14px;font-weight:700;color:#1f2937;" id="bannerClientName">Tap below to load full details</div>
+      <div style="font-size:11px;color:#6b7280;" id="bannerClientId"></div>
+    </div>
+    <a href="https://michaelhodnett2022-coder.github.io/bioblue-field-tools" style="font-size:11px;font-weight:600;color:#7c3aed;text-decoration:none;
+        background:white;border:1.5px solid #7c3aed;border-radius:6px;padding:5px 10px;">
+      Change Client
+    </a>
+  </div>
+  <div id="noClientBanner" style="display:none;align-items:center;gap:12px;
+      background:#fff7ed;border:1.5px solid #f59e0b;
+      border-radius:10px;padding:12px 16px;margin:16px 16px 0;">
+    <div style="font-size:20px;">⚠️</div>
+    <div style="flex:1;">
+      <div style="font-size:13px;font-weight:700;color:#92400e;">No client selected</div>
+      <div style="font-size:12px;color:#78350f;">Go back to Field Tools and select a client first</div>
+    </div>
+    <a href="https://michaelhodnett2022-coder.github.io/bioblue-field-tools" style="font-size:11px;font-weight:600;color:#92400e;text-decoration:none;
+        background:white;border:1.5px solid #f59e0b;border-radius:6px;padding:5px 10px;white-space:nowrap;">
+      ← Field Tools
+    </a>
+  </div>
+
+  <!-- UPDATE MODE BANNER -->
+  <div id="updateModeBanner" style="display:none;align-items:center;gap:12px;
+      background:#fef3c7;border:2px solid #d97706;
+      border-radius:10px;padding:14px 16px;margin:16px 16px 0;flex-wrap:wrap;">
+    <div style="font-size:24px;">💬</div>
+    <div style="flex:1;">
+      <div style="font-size:11px;font-weight:700;color:#92400e;text-transform:uppercase;letter-spacing:0.5px;">Update Mode — Log Conversation</div>
+      <div style="font-size:13px;font-weight:600;color:#78350f;">Add notes below — no new PDF will be created. The note is timestamped and appended to the client record in Drive.</div>
+    </div>
+    <a href="https://michaelhodnett2022-coder.github.io/bioblue-field-tools" style="font-size:11px;font-weight:600;color:#92400e;text-decoration:none;
+        background:white;border:1.5px solid #d97706;border-radius:6px;padding:5px 10px;white-space:nowrap;">
+      ← Back
+    </a>
+  </div>
+
+  <!-- SNAPSHOT RESTORE BANNER -->
+  <div id="snapshotBanner" style="display:none;align-items:center;gap:12px;
+      background:rgba(245,158,11,0.1);border:1.5px solid rgba(245,158,11,0.5);
+      border-radius:10px;padding:14px 16px;margin:12px 16px 0;flex-wrap:wrap;">
+    <div style="font-size:22px;">📋</div>
+    <div style="flex:1;">
+      <div style="font-size:13px;font-weight:700;color:#92400e;">Previous submission found</div>
+      <div style="font-size:11px;color:#78350f;">Saved: <span data-snap-date></span> — tap Restore to reload all fields</div>
+    </div>
+    <button onclick="restoreSnapshot()" style="background:#d97706;color:white;border:none;border-radius:8px;
+        padding:9px 16px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;">
+      ↩️ Restore
+    </button>
+  </div>
+
+
+  <!-- SECTION 1: CLIENT DETAILS — MANDATORY -->
+  <div class="section-card">
+    <div class="section-header" onclick="toggleSection('s1')">
+      <div class="section-header-icon">🏢</div>
+      <div class="section-header-text">
+        <h2>1. Client Details</h2>
+        <p>Complete this section to create the client record</p>
+      </div>
+      <div style="background:rgba(255,255,255,0.2);border-radius:6px;padding:3px 8px;font-size:10px;font-weight:700;color:white;letter-spacing:0.5px;flex-shrink:0;">REQUIRED</div>
+      <div class="section-toggle" id="toggle-s1">▼</div>
+    </div>
+    <div class="section-body" id="s1">
+
+      <div class="field-row">
+        <div class="field-group">
+          <label class="field-label required">Date</label>
+          <input type="date" id="prospectDate" oninput="updateProgress()">
+        </div>
+        <div class="field-group">
+          <label class="field-label">BDM</label>
+          <select id="bdmNameTop" onchange="syncBDM(this.value);updateProgress()">
+            <option value="">— Select —</option>
+            <option>Michael Hodnett</option>
+            <option>Derek Page</option>
+            <option>Angelo Sayas</option>
+            <option>Kevin Goverd</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- NAMING CONVENTION TOOL -->
+      <div style="background:var(--purple-pale);border:2px solid var(--purple-light);border-radius:10px;padding:16px;margin-bottom:16px;">
+        <div style="font-size:10px;font-weight:700;color:var(--purple-dark);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">
+          NEW CLIENT — BIOBLUE NAMING CONVENTION
+        </div>
+
+        <div class="field-group" style="margin-bottom:10px;">
+          <label class="field-label required">Customer Billing Entity</label>
+          <input type="text" id="billingEntity" placeholder="Who BioBlue invoices e.g. Wickhams" oninput="generateSiteName();generateTrackpodName();updateProgress()">
+        </div>
+
+        <div class="field-group" style="margin-bottom:10px;">
+          <label class="field-label">Site Tag Name <span style="font-weight:400;font-size:10px;">(This is what the customer calls this site eg Rosies Roadhouse)</span></label>
+          <input type="text" id="siteLocationName" placeholder="" oninput="generateSiteName();generateTrackpodName();updateProgress()">
+        </div>
+
+        <div class="field-row" style="margin-bottom:10px;">
+          <div class="field-group">
+            <label class="field-label required">Descriptor</label>
+            <select id="descriptor" onchange="generateSiteName();generateTrackpodName();updateProgress()">
+              <option value="">Select...</option>
+              <option>Depot</option>
+              <option>Mine</option>
+              <option>Office</option>
+              <option>Other</option>
+              <option>Outside Payment Terminal (Unmanned)</option>
+              <option>Port</option>
+              <option>Reseller Customer Site</option>
+              <option>Service Station</option>
+              <option>Site</option>
+              <option>Store</option>
+              <option>Terminal</option>
+              <option>Warehouse</option>
+              <option>Workshop</option>
+              <option>Yard</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <label class="field-label required">State</label>
+            <select id="state" onchange="generateSiteName();generateTrackpodName();updateProgress()">
+              <option value="">Select...</option>
+              <option>WA</option><option>NSW</option><option>VIC</option>
+              <option>QLD</option><option>SA</option><option>TAS</option>
+              <option>NT</option><option>ACT</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field-group" style="margin-bottom:10px;">
+          <label class="field-label required">Suburb</label>
+          <input type="text" id="suburb" placeholder="" oninput="generateSiteName();generateTrackpodName();updateProgress()">
+        </div>
+
+        <div class="field-group">
+          <label class="field-label">Generated Site Name <span style="font-weight:400;font-size:10px;">(locked)</span></label>
+          <input type="text" id="generatedSiteName" readonly placeholder="Fill fields above to generate name..."
+            style="background:#f0f0ff;border-color:var(--purple-light);color:var(--purple-dark);font-weight:700;cursor:default;">
+          <div id="siteNameCharCount" style="font-size:11px;margin-top:4px;color:var(--gray-mid);"></div>
+        </div>
+
+        <div class="field-group" style="margin-top:10px;">
+          <label class="field-label">Site Name (Trackpod) <span style="font-weight:400;font-size:10px;">(locked)</span></label>
+          <input type="text" id="trackpodName" readonly placeholder="Fill fields above to generate name..."
+            style="background:#f0f0ff;border-color:var(--purple-light);color:var(--purple-dark);font-weight:700;cursor:default;">
+        </div>
+      </div>
+
+      <!-- ADDRESS -->
+      <div class="field-group" style="margin-bottom:12px;">
+        <label class="field-label">Site Address</label>
+        <div class="address-field-wrap">
+          <div style="position:relative;">
+            <input type="text" id="siteAddress" placeholder="Street address" style="padding-right:110px;" oninput="addrAC(this,'addrDrop')" autocomplete="off">
+            <div id="addrDrop" style="display:none;position:absolute;top:100%;left:0;right:0;background:white;border:1px solid #ccc;border-radius:0 0 8px 8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);z-index:999;max-height:220px;overflow-y:auto;"></div>
+          </div>
+          <button class="gps-btn" onclick="getGPS()">📍 Use GPS</button>
+        </div>
+        <div class="gps-status" id="gpsStatus"></div>
+      </div>
+
+      <div class="field-row">
+        <div class="field-group">
+          <label class="field-label">Postcode</label>
+          <input type="text" id="postcode" placeholder="6106" maxlength="4">
+        </div>
+        <div class="field-group">
+          <!-- spacer -->
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- QUICK SUBMIT AFTER SECTION 1 -->
+  <div id="quickSubmitBlock" style="background:var(--purple-pale);border:2px solid var(--purple-light);border-radius:12px;padding:16px;margin-bottom:8px;">
+    <div style="font-size:12px;font-weight:600;color:var(--purple-dark);margin-bottom:10px;">
+      ✅ Client details complete — ready to create record
+    </div>
+    <button onclick="uploadAndSend()" data-submit-btn
+      style="width:100%;padding:14px;background:var(--purple-dark);color:white;border:none;border-radius:10px;
+        font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;letter-spacing:0.3px;">
+      ☁️ Save &amp; Submit — Create Client Record
+    </button>
+    <div style="font-size:11px;color:var(--gray-mid);margin-top:8px;text-align:center;">
+      Or continue below to add opportunity and conversation details
+    </div>
+  </div>
+
+  <div style="display:flex;align-items:center;gap:12px;margin:4px 0 8px;">
+    <div style="flex:1;height:1.5px;background:var(--gray-light);"></div>
+    <span style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--gray-mid);white-space:nowrap;">Optional sections below</span>
+    <div style="flex:1;height:1.5px;background:var(--gray-light);"></div>
+  </div>
+
+  <!-- SECTION 2: CONTACTS -->
+  <div class="section-card">
+    <div class="section-header" onclick="toggleSection('s2')">
+      <div class="section-header-icon">👥</div>
+      <div class="section-header-text">
+        <h2>2. Contacts <span style="font-size:10px;font-weight:400;opacity:0.7;">(optional — all fields)</span></h2>
+        <p>Business contact, KDM, logistics, admin and other</p>
+      </div>
+      <div class="section-toggle" id="toggle-s2">▶</div>
+    </div>
+    <div class="section-body collapsed" id="s2">
+
+      <div class="field-group" style="margin-bottom:14px;">
+        <label class="field-label">Proof of Delivery (POD) Email</label>
+        <input type="email" id="podEmail" placeholder="e.g. pod@company.com.au">
+        <div style="font-size:11px;color:var(--gray-mid);margin-top:4px;">Shared with Admin and Audit forms — fills automatically if already entered there</div>
+      </div>
+
+      <div class="field-group" style="margin-bottom:14px;">
+        <label class="field-label">Additional POD Email <span style="font-weight:400;font-size:10px;">(optional)</span></label>
+        <input type="email" id="podEmail2" placeholder="e.g. pod2@company.com.au">
+      </div>
+
+      <div class="field-group" style="margin-bottom:14px;">
+        <label class="field-label">Additional POD Email <span style="font-weight:400;font-size:10px;">(optional)</span></label>
+        <input type="email" id="podEmail3" placeholder="e.g. pod3@company.com.au">
+      </div>
+      <div style="border-top:1.5px solid var(--gray-light);margin-bottom:16px;"></div>
+
+      <!-- CONTACT 1: BUSINESS / SITE CONTACT -->
+      <div class="contact-card">
+        <div class="contact-card-hdr">
+          <span>Contact 1 — Site Contact</span>
+        </div>
+        <div class="contact-card-body">
+          <div class="field-row">
+            <div class="field-group">
+              <label class="field-label">Full Name</label>
+              <input type="text" id="c1Name" placeholder="Full name">
+            </div>
+            <div class="field-group">
+              <label class="field-label">Title / Role</label>
+              <input type="text" id="c1Role" placeholder="e.g. Site Manager">
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-group">
+              <label class="field-label">Email</label>
+              <input type="email" id="c1Email" placeholder="name@company.com.au">
+            </div>
+            <div class="field-group">
+              <label class="field-label">Phone</label>
+              <input type="tel" id="c1Phone" placeholder="04XX XXX XXX">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CONTACT 2: KEY DECISION MAKER -->
+      <div class="contact-card">
+        <div class="contact-card-hdr">
+          <span>Contact 2 — Key Decision Maker</span>
+          <span class="linked-badge" id="c2LinkedBadge"></span>
+        </div>
+        <div class="contact-card-body">
+          <div class="same-as-wrap">
+            <label>Same as:</label>
+            <select id="c2SameAs" onchange="applySameAs(2,this.value)">
+              <option value="">— Fill independently —</option>
+              <option value="1">Contact 1 — Site Contact</option>
+            </select>
+          </div>
+          <div class="field-row">
+            <div class="field-group">
+              <label class="field-label">Full Name</label>
+              <input type="text" id="c2Name" placeholder="Full name">
+            </div>
+            <div class="field-group">
+              <label class="field-label">Title / Role</label>
+              <input type="text" id="c2Role" placeholder="e.g. General Manager">
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-group">
+              <label class="field-label">Email</label>
+              <input type="email" id="c2Email" placeholder="name@company.com.au">
+            </div>
+            <div class="field-group">
+              <label class="field-label">Phone</label>
+              <input type="tel" id="c2Phone" placeholder="04XX XXX XXX">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CONTACT 3: LOGISTICS -->
+      <div class="contact-card">
+        <div class="contact-card-hdr">
+          <span>Contact 3 — Logistics Contact</span>
+          <span class="linked-badge" id="c3LinkedBadge"></span>
+        </div>
+        <div class="contact-card-body">
+          <div class="same-as-wrap">
+            <label>Same as:</label>
+            <select id="c3SameAs" onchange="applySameAs(3,this.value)">
+              <option value="">— Fill independently —</option>
+              <option value="1">Contact 1 — Site Contact</option>
+              <option value="2">Contact 2 — Key Decision Maker</option>
+            </select>
+          </div>
+          <div class="field-row">
+            <div class="field-group">
+              <label class="field-label">Full Name</label>
+              <input type="text" id="c3Name" placeholder="Full name">
+            </div>
+            <div class="field-group">
+              <label class="field-label">Title / Role</label>
+              <input type="text" id="c3Role" placeholder="e.g. Transport Manager">
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-group">
+              <label class="field-label">Email</label>
+              <input type="email" id="c3Email" placeholder="name@company.com.au">
+            </div>
+            <div class="field-group">
+              <label class="field-label">Phone</label>
+              <input type="tel" id="c3Phone" placeholder="04XX XXX XXX">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CONTACT 4: ADMIN / INVOICING -->
+      <div class="contact-card">
+        <div class="contact-card-hdr">
+          <span>Contact 4 — Admin / Invoicing Contact</span>
+          <span class="linked-badge" id="c4LinkedBadge"></span>
+        </div>
+        <div class="contact-card-body">
+          <div class="same-as-wrap">
+            <label>Same as:</label>
+            <select id="c4SameAs" onchange="applySameAs(4,this.value)">
+              <option value="">— Fill independently —</option>
+              <option value="1">Contact 1 — Site Contact</option>
+              <option value="2">Contact 2 — Key Decision Maker</option>
+              <option value="3">Contact 3 — Logistics Contact</option>
+            </select>
+          </div>
+          <div class="field-row">
+            <div class="field-group">
+              <label class="field-label">Full Name</label>
+              <input type="text" id="c4Name" placeholder="Full name">
+            </div>
+            <div class="field-group">
+              <label class="field-label">Title / Role</label>
+              <input type="text" id="c4Role" placeholder="e.g. Accounts Payable">
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-group">
+              <label class="field-label">Email</label>
+              <input type="email" id="c4Email" placeholder="accounts@company.com.au">
+            </div>
+            <div class="field-group">
+              <label class="field-label">Phone</label>
+              <input type="tel" id="c4Phone" placeholder="04XX XXX XXX">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CONTACT 5: OTHER -->
+      <div class="contact-card">
+        <div class="contact-card-hdr">
+          <span>Contact 5 — Other Contact</span>
+          <span class="linked-badge" id="c5LinkedBadge"></span>
+        </div>
+        <div class="contact-card-body">
+          <div class="same-as-wrap">
+            <label>Same as:</label>
+            <select id="c5SameAs" onchange="applySameAs(5,this.value)">
+              <option value="">— Fill independently —</option>
+              <option value="1">Contact 1 — Site Contact</option>
+              <option value="2">Contact 2 — Key Decision Maker</option>
+              <option value="3">Contact 3 — Logistics Contact</option>
+              <option value="4">Contact 4 — Admin / Invoicing Contact</option>
+            </select>
+          </div>
+          <div class="field-group" style="margin-bottom:10px;">
+            <label class="field-label">Contact Type / Role Description</label>
+            <input type="text" id="c5Label" placeholder="e.g. Safety Officer, Operations Manager">
+          </div>
+          <div class="field-row">
+            <div class="field-group">
+              <label class="field-label">Full Name</label>
+              <input type="text" id="c5Name" placeholder="Full name">
+            </div>
+            <div class="field-group">
+              <label class="field-label">Title / Role</label>
+              <input type="text" id="c5Role" placeholder="e.g. HSE Manager">
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-group">
+              <label class="field-label">Email</label>
+              <input type="email" id="c5Email" placeholder="name@company.com.au">
+            </div>
+            <div class="field-group">
+              <label class="field-label">Phone</label>
+              <input type="tel" id="c5Phone" placeholder="04XX XXX XXX">
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- SECTION 3: OPPORTUNITY -->
+  <div class="section-card">
+    <div class="section-header" onclick="toggleSection('s3')">
+      <div class="section-header-icon">🎯</div>
+      <div class="section-header-text">
+        <h2>3. Opportunity <span style="font-size:10px;font-weight:400;opacity:0.7;">(optional)</span></h2>
+        <p>Product interest and current setup</p>
+      </div>
+      <div class="section-toggle" id="toggle-s3">▶</div>
+    </div>
+    <div class="section-body collapsed" id="s3">
+
+      <div class="field-group" style="margin-bottom:16px;">
+        <label class="field-label required">Product Interest</label>
+        <div class="pill-group">
+          <button class="pill-btn" id="pill-bulk" onclick="setInterest('Bulk')">🚛 Bulk</button>
+          <button class="pill-btn" id="pill-packaged" onclick="setInterest('Packaged')">📦 Packaged</button>
+          <button class="pill-btn" id="pill-both" onclick="setInterest('Both')">⚡ Both</button>
+        </div>
+        <input type="hidden" id="productInterest">
+      </div>
+
+      <div class="field-row">
+        <div class="field-group">
+          <label class="field-label">Current Supplier</label>
+          <input type="text" id="currentSupplier" placeholder="">
+        </div>
+        <div class="field-group">
+          <label class="field-label">Estimated Volume</label>
+          <input type="text" id="estVolume" placeholder="">
+        </div>
+      </div>
+
+      <div class="field-row">
+        <div class="field-group">
+          <label class="field-label">Estimated Current Price</label>
+          <input type="text" id="estCurrentPrice" placeholder="e.g. 85cpl or $1.10/L">
+        </div>
+      </div>
+
+      <div class="yn-item" id="yn-distributor" style="margin-top:6px;">
+        <div class="yn-question">Is this a distributor / reseller site? <span style="font-size:11px;color:var(--gray-mid);">(Select No for internal usage)</span></div>
+        <div class="yn-controls">
+          <button class="yn-btn" onclick="setOpportunityYN('distributor','Y')">Y</button>
+          <button class="yn-btn" onclick="setOpportunityYN('distributor','N')">N</button>
+        </div>
+      </div>
+      <input type="hidden" id="isDistributor">
+
+    </div>
+  </div>
+
+  <!-- SECTION 4: CONVERSATION -->
+  <div class="section-card">
+    <div class="section-header" onclick="toggleSection('s4')">
+      <div class="section-header-icon">💬</div>
+      <div class="section-header-text">
+        <h2>4. Conversation <span style="font-size:10px;font-weight:400;opacity:0.7;">(optional)</span></h2>
+        <p>Notes, follow-up and next steps</p>
+      </div>
+      <div class="section-toggle" id="toggle-s4">▶</div>
+    </div>
+    <div class="section-body collapsed" id="s4">
+
+      <div class="field-group" style="margin-bottom:16px;">
+        <label class="field-label required">Conversation Notes</label>
+        <textarea id="convNotes" rows="4" placeholder="What was discussed? Key pain points, objections, opportunities..." oninput="updateProgress()"></textarea>
+      </div>
+
+      <div class="followup-card">
+        <div style="font-size:11px;font-weight:700;color:var(--purple-dark);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px;">📅 Follow-Up</div>
+        <div class="field-row">
+          <div class="field-group">
+            <label class="field-label">Follow-Up Date</label>
+            <input type="date" id="followupDate" oninput="updateProgress()">
+          </div>
+          <div class="field-group">
+            <label class="field-label">Follow-Up Action</label>
+            <input type="text" id="followupAction" placeholder="">
+          </div>
+        </div>
+        <p style="font-size:11px;color:var(--purple);margin-top:8px;">📆 A calendar invite will be sent to your email on submission</p>
+        <p style="font-size:11px;color:var(--purple);margin-top:4px;">👤 A contact card (.vcf) will be generated for easy saving to your phone</p>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- SECTION 4: SIGN-OFF -->
+  <div class="section-card">
+    <div class="section-header" onclick="toggleSection('s5')">
+      <div class="section-header-icon">✍️</div>
+      <div class="section-header-text">
+        <h2>5. Sign-Off</h2>
+        <p>BDM confirmation</p>
+      </div>
+      <div class="section-toggle" id="toggle-s5">▶</div>
+    </div>
+    <div class="section-body collapsed" id="s5">
+      <div class="field-row">
+        <div class="field-group">
+          <label class="field-label required">BDM</label>
+          <select id="bdmName" onchange="autoFill(this.value);updateProgress()">
+            <option value="">— Select BDM —</option>
+            <option>Michael Hodnett</option>
+            <option>Derek Page</option>
+            <option>Angelo Sayas</option>
+            <option>Kevin Goverd</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label class="field-label">BDM Email</label>
+          <input type="email" id="bdmEmail" placeholder="bdm@bioblue.com.au">
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- STICKY FOOTER -->
+<div class="sticky-footer">
+  <button class="btn btn-clear" onclick="confirmClear()">🗑️ Clear</button>
+  <button class="btn btn-dl" onclick="downloadPDF()">⬇️ Download</button>
+  <button class="btn btn-submit" onclick="uploadAndSend()" data-submit-btn>☁️ Submit</button>
+</div>
+
+<div class="modal-overlay" id="modal">
+  <div class="modal-box">
+    <h3>✅ Prospect Submitted</h3>
+    <p id="modalMsg"></p>
+    <div id="modalContactButtons"></div>
+    <div class="modal-actions">
+      <button class="btn-primary" onclick="closeModal()">Close</button>
+      <button class="btn-primary" id="modalFieldToolsBtn" style="display:none;background:var(--purple-dark);"
+        onclick="window.location.href='https://michaelhodnett2022-coder.github.io/bioblue-field-tools'">
+        ← Field Tools
+      </button>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+// =====================================================================
+// CONFIG
+// =====================================================================
+const GDRIVE_CLIENT_ID    = '49055725643-mlnqu8l92vmau83rnrk8imupiqvs03t1.apps.googleusercontent.com';
+const GDRIVE_FOLDER_NAME  = 'BioBlue Audits';
+const CLIENT_RECORDS_NAME = 'BioBlue_Client_Records.xlsx';
+const EMAILJS_SERVICE     = 'service_f0s6xv5';
+const EMAILJS_PUBLIC_KEY  = 'VOzIE82-mIbrEcuPK';
+let gdriveToken = null;
+let productInterest = '';
+
+const BDM_MAP = {
+  'Michael Hodnett': { email:'michael.hodnett@bioblue.com.au' },
+  'Derek Page':      { email:'derek.page@bioblue.com.au' },
+  'Angelo Sayas':    { email:'angelo.sayas@bioblue.com.au' },
+  'Kevin Goverd':    { email:'kevin.goverd@bioblue.com.au' },
+};
+
+// =====================================================================
+// PRODUCT INTEREST PILLS
+// =====================================================================
+function setInterest(val) {
+  productInterest = val;
+  document.getElementById('productInterest').value = val;
+  document.getElementById('pill-bulk').className = 'pill-btn' + (val==='Bulk'?' active-bulk':'');
+  document.getElementById('pill-packaged').className = 'pill-btn' + (val==='Packaged'?' active-packaged':'');
+  document.getElementById('pill-both').className = 'pill-btn' + (val==='Both'?' active-both':'');
+  updateProgress();
+}
+
+// =====================================================================
+// OPPORTUNITY Y/N — Is Distributor / Reseller
+// =====================================================================
+function setOpportunityYN(key, val) {
+  const hiddenMap = { distributor: 'isDistributor' };
+  const hiddenEl = document.getElementById(hiddenMap[key]);
+  if (hiddenEl) hiddenEl.value = val;
+  const item = document.getElementById('yn-' + key);
+  if (item) {
+    item.querySelectorAll('.yn-btn').forEach(b => {
+      b.classList.remove('active-y','active-n');
+      if (b.textContent === 'Y' && val === 'Y') b.classList.add('active-y');
+      if (b.textContent === 'N' && val === 'N') b.classList.add('active-n');
+    });
+  }
+  updateProgress();
+}
+
+// =====================================================================
+// CONTACTS — SAME AS LINKING (Contacts 2–5)
+// =====================================================================
+const CONTACT_LABELS = {
+  1:'Site Contact', 2:'Key Decision Maker',
+  3:'Logistics Contact', 4:'Admin / Invoicing Contact', 5:'Other Contact'
+};
+
+function applySameAs(targetNum, sourceNum) {
+  const fields = ['Name','Role','Email','Phone'];
+  // Always clear link state first
+  fields.forEach(f => {
+    const el = document.getElementById(`c${targetNum}${f}`);
+    if (el) { el.readOnly=false; el.classList.remove('linked'); el.value=''; }
+  });
+  const badge = document.getElementById(`c${targetNum}LinkedBadge`);
+  if (badge) badge.style.display = 'none';
+
+  if (!sourceNum) return; // fill independently
+
+  const src = parseInt(sourceNum);
+  fields.forEach(f => {
+    const srcEl = document.getElementById(`c${src}${f}`);
+    const tgtEl = document.getElementById(`c${targetNum}${f}`);
+    if (srcEl && tgtEl) {
+      tgtEl.value = srcEl.value;
+      tgtEl.readOnly = true;
+      tgtEl.classList.add('linked');
+    }
+  });
+  if (badge) {
+    badge.textContent = `Linked to Contact ${src} — ${CONTACT_LABELS[src]}`;
+    badge.style.display = 'inline-flex';
+  }
+}
+
+// =====================================================================
+// NAMING CONVENTION
+// =====================================================================
+function generateSiteName() {
+  const billing  = (document.getElementById('billingEntity')?.value||'').trim();
+  const siteLoc  = (document.getElementById('siteLocationName')?.value||'').trim();
+  const suburb   = (document.getElementById('suburb')?.value||'').trim();
+  const state    = document.getElementById('state')?.value||'';
+  const out      = document.getElementById('generatedSiteName');
+  const counter  = document.getElementById('siteNameCharCount');
+  if (!billing||!suburb||!state) {
+    if(out) out.value='';
+    if(counter) counter.textContent='';
+    window._siteNameTooLong = false;
+    return;
+  }
+  // Build name — Site Location Name is optional; Descriptor never appears in the generated name
+  const name = siteLoc
+    ? billing+' – '+siteLoc+' ('+suburb+', '+state+')'
+    : billing+' ('+suburb+', '+state+')';
+  const len = name.length;
+
+  if (len > 50) {
+    window._siteNameTooLong = true;
+    if (out) {
+      out.value = '⚠️ Name too long — won\'t fit accounting system';
+      out.style.background = '#fee2e2'; out.style.color = '#b91c1c';
+    }
+    if (counter) {
+      counter.textContent = `${len}/50 characters — over limit. Shorten Billing Entity or Site Tag Name to continue.`;
+      counter.style.color = '#b91c1c'; counter.style.fontWeight = '700';
+    }
+  } else {
+    window._siteNameTooLong = false;
+    if (out) { out.value=name; out.style.background='#ede9fe'; out.style.color='#5b21b6'; }
+    if (counter) {
+      counter.textContent = `${len}/50 characters`;
+      counter.style.color = len > 40 ? '#b45309' : 'var(--gray-mid)';
+      counter.style.fontWeight = len > 40 ? '700' : '400';
+    }
+  }
+  // Sync companyName for backward compat
+  const cn = document.getElementById('companyName');
+  if (cn) cn.value = billing;
+}
+
+// =====================================================================
+// TRACKPOD NAME — separate naming output, does not affect file/document
+// naming convention in any way. Site Tag Name + Suburb + State,
+// falling back to Billing Entity + Suburb + State when Site Tag Name is blank.
+// =====================================================================
+function generateTrackpodName() {
+  const billing = (document.getElementById('billingEntity')?.value||'').trim();
+  const siteLoc = (document.getElementById('siteLocationName')?.value||'').trim();
+  const suburb  = (document.getElementById('suburb')?.value||'').trim();
+  const state   = document.getElementById('state')?.value||'';
+  const out     = document.getElementById('trackpodName');
+  if (!billing||!suburb||!state) { if(out) out.value=''; return; }
+  const base = siteLoc || billing;
+  const name = base+', '+suburb+' '+state;
+  if (out) { out.value=name; out.style.background='#ede9fe'; out.style.color='#5b21b6'; }
+}
+
+function syncBDM(name) {
+  // Sync top BDM selector with bottom sign-off selector
+  const bottom = document.getElementById('bdmName');
+  if (bottom) bottom.value = name;
+  autoFill(name);
+}
+
+// =====================================================================
+// ADDRESS AUTOCOMPLETE
+// =====================================================================
+let acTimer = null;
+function addrAC(input, dropId) {
+  const q = input.value.trim();
+  const drop = document.getElementById(dropId);
+  if (q.length < 4) { drop.style.display = 'none'; return; }
+  clearTimeout(acTimer);
+  acTimer = setTimeout(() => {
+    if (window.google && google.maps && google.maps.places) {
+      new google.maps.places.AutocompleteService().getPlacePredictions(
+        { input:q, componentRestrictions:{ country:'au' }, types:['address'] },
+        (preds, st) => {
+          if (st !== 'OK' || !preds) { drop.style.display='none'; return; }
+          drop._preds = preds;
+          drop.innerHTML = preds.map((p,i) => `
+            <div onclick="selectAddr(${i})" style="padding:10px 14px;cursor:pointer;font-size:13px;border-bottom:1px solid #f0f0f0;"
+              onmouseover="this.style.background='#f5f3ff'" onmouseout="this.style.background='white'">
+              📍 ${p.description}
+            </div>`).join('');
+          drop.style.display = 'block';
+        }
+      );
+    }
+  }, 350);
+}
+
+function selectAddr(idx) {
+  const drop = document.getElementById('addrDrop');
+  const pred = drop._preds?.[idx];
+  if (!pred) { drop.style.display='none'; return; }
+  drop.style.display = 'none';
+  // Fill full address into siteAddress field
+  document.getElementById('siteAddress').value = pred.description.split(',')[0];
+  new google.maps.places.PlacesService(new google.maps.Map(document.createElement('div'))).getDetails(
+    { placeId:pred.place_id, fields:['address_components'] },
+    (place, st) => {
+      if (st !== 'OK' || !place) return;
+      const get  = t => place.address_components.find(c => c.types.includes(t))?.long_name  || '';
+      const getS = t => place.address_components.find(c => c.types.includes(t))?.short_name || '';
+      document.getElementById('siteAddress').value = [get('street_number'), get('route')].filter(Boolean).join(' ');
+      document.getElementById('suburb').value   = get('locality') || get('sublocality');
+      document.getElementById('postcode').value = get('postal_code');
+      const sc = getS('administrative_area_level_1');
+      const se = document.getElementById('state');
+      for (let i = 0; i < se.options.length; i++) {
+        if (se.options[i].value === sc) { se.selectedIndex = i; break; }
+      }
+      updateProgress();
+    }
+  );
+}
+
+document.addEventListener('click', e => {
+  const d = document.getElementById('addrDrop');
+  if (d && !d.contains(e.target) && e.target.id !== 'siteAddress') d.style.display = 'none';
+});
+
+// =====================================================================
+// GPS
+// =====================================================================
+function getGPS() {
+  const st = document.getElementById('gpsStatus');
+  if (!navigator.geolocation) { st.textContent = '❌ Not supported'; return; }
+  st.textContent = '📡 Getting location...'; st.style.color = 'var(--purple)';
+  navigator.geolocation.getCurrentPosition(async pos => {
+    const { latitude:la, longitude:lo, accuracy:ac } = pos.coords;
+    try {
+      const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${la}&lon=${lo}&zoom=18&addressdetails=1`, { headers:{ 'Accept-Language':'en-AU' } });
+      const d = await r.json(); const a = d.address;
+      document.getElementById('siteAddress').value = [a.house_number, a.road||a.street].filter(Boolean).join(' ');
+      document.getElementById('suburb').value   = a.suburb || a.city || a.town || '';
+      document.getElementById('postcode').value = a.postcode || '';
+      const sm = { 'Western Australia':'WA','New South Wales':'NSW','Victoria':'VIC','Queensland':'QLD','South Australia':'SA','Tasmania':'TAS','Northern Territory':'NT','Australian Capital Territory':'ACT' };
+      const se = document.getElementById('state'); const sc = sm[a.state] || '';
+      for (let i = 0; i < se.options.length; i++) { if (se.options[i].value === sc) { se.selectedIndex = i; break; } }
+      st.textContent = `✅ Address filled (±${Math.round(ac)}m) — verify`; st.style.color = 'var(--green)';
+    } catch(e) { st.textContent = '⚠️ Could not resolve address'; st.style.color = '#e67e22'; }
+  }, () => { st.textContent = '❌ Could not get location'; st.style.color = 'var(--red)'; }, { enableHighAccuracy:true, timeout:15000 });
+}
+
+// =====================================================================
+// BDM AUTOFILL
+// =====================================================================
+function autoFill(name) {
+  const b = BDM_MAP[name];
+  if (b) document.getElementById('bdmEmail').value = b.email;
+}
+
+// =====================================================================
+// PROGRESS
+// =====================================================================
+function updateProgress() {
+  const req = ['billingEntity','prospectDate','suburb','state','bdmName'];
+  const filled = req.filter(id => document.getElementById(id)?.value?.trim()).length;
+  const hasInterest = productInterest ? 1 : 0;
+  const total = req.length + 1;
+  const pct = Math.round(((filled + hasInterest) / total) * 100);
+  document.getElementById('progressBar').style.width = pct + '%';
+  document.getElementById('progressLabel').textContent = pct + '% complete';
+}
+
+// =====================================================================
+// COLLECT DATA
+// =====================================================================
+function collectData() {
+  const g = id => document.getElementById(id)?.value || '';
+  const contact = n => ({
+    name:  g(`c${n}Name`),
+    role:  g(`c${n}Role`),
+    email: g(`c${n}Email`),
+    phone: g(`c${n}Phone`),
+  });
+  return {
+    companyName:      g('billingEntity')||g('companyName'),
+    billingEntity:    g('billingEntity'),
+    siteLocationName: g('siteLocationName'),
+    descriptor:       g('descriptor'),
+    generatedSiteName:g('generatedSiteName'),
+    trackpodName:     g('trackpodName'),
+    prospectDate:     g('prospectDate'),
+    siteAddress:      g('siteAddress'),
+    suburb:           g('suburb'),
+    state:            g('state'),
+    postcode:         g('postcode'),
+    // 5 structured contacts
+    c1: contact(1), // Site Contact
+    c2: contact(2), // Key Decision Maker
+    c3: contact(3), // Logistics
+    c4: contact(4), // Admin / Invoicing
+    c5: { label:g('c5Label'), ...contact(5) }, // Other
+    // Backward compat aliases (used by PDF, VCF, ICS, email)
+    contactName:   g('c1Name'),
+    contactRole:   g('c1Role'),
+    contactMobile: g('c1Phone'),
+    contactEmail:  g('c1Email'),
+    productInterest: productInterest,
+    currentSupplier: g('currentSupplier'),
+    estVolume:       g('estVolume'),
+    estCurrentPrice: g('estCurrentPrice'),
+    isDistributor:   g('isDistributor'),
+    podEmail:        g('podEmail'),
+    podEmail2:       g('podEmail2'),
+    podEmail3:       g('podEmail3'),
+    convNotes:       g('convNotes'),
+    followupDate:    g('followupDate'),
+    followupAction:  g('followupAction'),
+    bdmName:         g('bdmName'),
+    bdmEmail:        g('bdmEmail'),
+    formType:        'Prospect',
+    _savedAt:        new Date().toISOString(),
+  };
+}
+
+// =====================================================================
+// ICS CALENDAR INVITE
+// =====================================================================
+function generateICS(d) {
+  if (!d.followupDate || !d.bdmEmail) return null;
+  const dt = d.followupDate.replace(/-/g, '');
+  const now = new Date().toISOString().replace(/[-:]/g,'').split('.')[0]+'Z';
+  const title = `Follow up: ${d.companyName}${d.followupAction ? ' — ' + d.followupAction : ''}`;
+  const desc = `Prospect: ${d.companyName}\\nContact: ${d.contactName} ${d.contactMobile}\\nProduct Interest: ${d.productInterest}\\nNotes: ${d.convNotes.replace(/\n/g,'\\n')}`;
+  return [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//BioBlue Field Tools//Prospect / Client Form//EN',
+    'CALSCALE:GREGORIAN',
+    'METHOD:PUBLISH',
+    'BEGIN:VEVENT',
+    `DTSTART;VALUE=DATE:${dt}`,
+    `DTEND;VALUE=DATE:${dt}`,
+    `DTSTAMP:${now}`,
+    `SUMMARY:${title}`,
+    `DESCRIPTION:${desc}`,
+    `ORGANIZER:mailto:${d.bdmEmail}`,
+    'STATUS:CONFIRMED',
+    'END:VEVENT',
+    'END:VCALENDAR'
+  ].join('\r\n');
+}
+
+function sendCalendarInvite(d) {
+  const ics = generateICS(d);
+  if (!ics || !d.bdmEmail) return;
+  // EmailJS with ICS as attachment via template
+  try {
+    emailjs.send(EMAILJS_SERVICE, 'template_55pubeo', {
+      to_email:    d.bdmEmail,
+      to_name:     d.bdmName,
+      subject:     `📅 Follow-up reminder: ${d.companyName} — ${d.followupDate}`,
+      message:     `Hi ${d.bdmName},\n\nThis is your follow-up reminder for ${d.companyName}.\n\nDate: ${d.followupDate}\nAction: ${d.followupAction || 'Follow up'}\nContact: ${d.contactName} ${d.contactMobile ? '— '+d.contactMobile : ''}\n\nConversation notes:\n${d.convNotes}\n\nThe .ics calendar file is attached — tap it to add to your calendar.\n\nBioBlue Field Tools`,
+      company:     d.companyName,
+      followup_date: d.followupDate,
+      followup_action: d.followupAction || 'Follow up',
+    });
+    // Also trigger download of ICS file on device
+    const blob = new Blob([ics], { type:'text/calendar;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `followup_${d.companyName.replace(/\s+/g,'_')}_${d.followupDate}.ics`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+  } catch(e) {
+    console.warn('Calendar invite failed:', e);
+  }
+}
+
+
+// =====================================================================
+// DUPLICATE CHECK — guards against same Generated Site Name
+// =====================================================================
+function normaliseSiteName(s) {
+  return (s || '')
+    .toLowerCase()
+    .replace(/pty\.?\s*ltd\.?/g, '')   // drop Pty Ltd
+    .replace(/[^a-z0-9]/g, '')           // strip punctuation, spaces, dashes
+    .trim();
+}
+
+async function checkDuplicateSiteName(generatedName) {
+  // Returns {isDupe, existingName, existingId} — reads the live client sheet
+  try {
+    // Get root folder
+    const fr = await fetch(
+      `https://www.googleapis.com/drive/v3/files?q=name='${GDRIVE_FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false&fields=files(id)`,
+      { headers: { Authorization: `Bearer ${gdriveToken}` } }
+    );
+    const fd = await fr.json();
+    if (!fd.files || !fd.files.length) return { isDupe:false };
+    const rootId = fd.files[0].id;
+
+    const sheetId = await getAdminSheetId(rootId);
+    if (!sheetId) return { isDupe:false };
+
+    const dl = await fetch(`https://www.googleapis.com/drive/v3/files/${sheetId}?alt=media`,
+      { headers: { Authorization: `Bearer ${gdriveToken}` } });
+    const ab = await dl.arrayBuffer();
+    const wb = XLSX.read(new Uint8Array(ab), { type:'array' });
+    repairClientRecordsHeaders(wb);
+    const ws = wb.Sheets['Client Records'];
+    const rows = XLSX.utils.sheet_to_json(ws, { header:1 });
+    const hdrs = rows[0] || [];
+    const nameCol = hdrs.indexOf('Site Name');
+    const idCol   = hdrs.indexOf('Client ID');
+    if (nameCol === -1) return { isDupe:false };
+
+    const target = normaliseSiteName(generatedName);
+    for (let i = 1; i < rows.length; i++) {
+      const existing = rows[i][nameCol];
+      if (existing && normaliseSiteName(existing) === target) {
+        return { isDupe:true, existingName: existing, existingId: rows[i][idCol] || '' };
+      }
+    }
+    return { isDupe:false };
+  } catch(e) {
+    console.warn('Duplicate check failed (allowing submit):', e.message);
+    return { isDupe:false }; // fail-open — never block on a check error
+  }
+}
+
+// =====================================================================
+// DOWNLOAD PDF TO DEVICE
+// =====================================================================
+async function downloadPDF() {
+  showToast('⏳ Generating PDF...');
+  try {
+    const doc = await generatePDF(true);
+    const d   = collectData();
+    const name = ((d.generatedSiteName||d.companyName||'Draft').replace(/[^a-zA-Z0-9\s]/g,'').trim().replace(/\s+/g,'_'))+'.Client.pdf';
+    doc.save(name);
+    showToast('📄 PDF downloaded!');
+  } catch(e) {
+    showToast('❌ ' + e.message);
+  }
+}
+
+// =====================================================================
+// VCARD CONTACT
+// =====================================================================
+function generateVCard(contact, label, d) {
+  if (!contact?.name) return;
+  var vcfName  = contact.name;
+  var vcfRole  = contact.role;
+  var vcfPhone = contact.phone;
+  var vcfEmail = contact.email;
+  var nameParts = vcfName.split(' ');
+  var firstName = nameParts[0] || '';
+  var lastName  = nameParts.slice(1).join(' ') || '';
+  var lines = [
+    'BEGIN:VCARD',
+    'VERSION:3.0',
+    'FN:' + vcfName,
+    'N:' + lastName + ';' + firstName + ';;;',
+    d.companyName ? 'ORG:' + d.companyName : '',
+    vcfRole       ? 'TITLE:' + vcfRole     : '',
+    vcfPhone      ? 'TEL;TYPE=CELL:' + vcfPhone : '',
+    vcfEmail      ? 'EMAIL:' + vcfEmail    : '',
+    (d.siteAddress||d.suburb||d.state||d.postcode)
+      ? ('ADR;TYPE=WORK:;;' + (d.siteAddress||'') + ';' + (d.suburb||'') + ';' + (d.state||'') + ';' + (d.postcode||'') + ';Australia')
+      : '',
+    'NOTE:BioBlue ' + (label||'contact') + '. Added by ' + d.bdmName + ' on ' + d.prospectDate,
+    'END:VCARD'
+  ].filter(Boolean).join('\r\n');
+  var blob = new Blob([lines], { type: 'text/vcard;charset=utf-8' });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href   = url;
+  a.download = vcfName.replace(/\s+/g, '_') + '.vcf';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(function(){ URL.revokeObjectURL(url); }, 10000);
+}
+
+// Builds the "Save to Phone" button list shown in the success modal —
+// one button per contact that was actually filled in, each triggering its
+// own vCard download directly on tap (a real user gesture, not a timer-
+// deferred background trigger, which mobile browsers can silently block).
+function buildContactSaveButtons(d) {
+  const slots = [
+    { c: d.c1, label: 'Site Contact' },
+    { c: d.c2, label: 'Key Decision Maker' },
+    { c: d.c3, label: 'Logistics Contact' },
+    { c: d.c4, label: 'Admin / Invoicing Contact' },
+    { c: d.c5, label: d.c5?.label || 'Other Contact' },
+  ];
+  window._modalContactData = d;
+  window._modalContactSlots = slots;
+  const wrap = document.getElementById('modalContactButtons');
+  if (!wrap) return;
+  const filled = slots.map((s, i) => ({ ...s, idx: i })).filter(s => s.c?.name);
+  if (!filled.length) { wrap.innerHTML = ''; return; }
+  wrap.innerHTML = '<div style="font-size:11px;font-weight:700;color:var(--gray-mid);text-transform:uppercase;letter-spacing:0.4px;margin:14px 0 6px;">Save Contacts to Phone</div>' +
+    filled.map(s => `
+      <button class="btn-primary" style="width:100%;margin-bottom:6px;display:flex;justify-content:center;gap:6px;"
+        onclick="generateVCard(window._modalContactSlots[${s.idx}].c, window._modalContactSlots[${s.idx}].label, window._modalContactData)">
+        📇 Save ${s.label} — ${s.c.name}
+      </button>`).join('');
+}
+
+
+// =====================================================================
+// PDF
+// =====================================================================
+// =====================================================================
+// STANDARD PDF HEADER — shared layout across all forms
+// =====================================================================
+function drawStdHeader(doc, d, formLabel, MC, ML) {
+  const margin=15,pW=210,cW=pW-margin*2;
+  const NAVY=[0,52,102],BLUE=[0,85,165],GRAY=[108,117,125],BLK=[30,40,50];
+  doc.setFont('helvetica','bold');doc.setFontSize(13);doc.setTextColor(...NAVY);
+  doc.text('Bio',margin,9);
+  const bW=doc.getTextWidth('Bio');
+  doc.setTextColor(...BLUE);doc.text('Blue',margin+bW,9);
+  const blueW=doc.getTextWidth('Blue'); // measured BEFORE font size changes below — fixes overlap bug
+  doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(...GRAY);
+  doc.text('  ·  '+formLabel,margin+bW+blueW,9);
+  const dv=d.prospectDate||d.formDate||d.auditDate||d.assessDate||'';
+  if(dv){let ds=dv;try{ds=new Date(dv+'T12:00:00').toLocaleDateString('en-AU');}catch(e){}doc.text(ds,pW-margin,9,{align:'right'});}
+  doc.setDrawColor(...BLUE);doc.setLineWidth(0.4);doc.line(margin,11.5,pW-margin,11.5);
+  doc.setFillColor(...MC);doc.rect(margin,13,cW,19,'F');
+  doc.setFont('helvetica','normal');doc.setFontSize(5.5);doc.setTextColor(255,255,255);
+  doc.text(formLabel.toUpperCase(),margin+3,17.5);
+  if (d.docRef) { doc.text(d.docRef,pW-margin-3,17.5,{align:'right'}); }
+  const sn=(d.generatedSiteName||d.siteName||d.companyName||d.customerName||'').toUpperCase();
+  doc.setFont('helvetica','bold');doc.setFontSize(11);doc.setTextColor(255,255,255);
+  doc.text(doc.splitTextToSize(sn,cW-8)[0],margin+3,24);
+  const by=33.5;doc.setFillColor(...ML);doc.rect(margin,by,cW,37,'F');
+  const bm=margin+3,hw=(cW-8)/2;
+  const lbl=(t,x,y)=>{doc.setFont('helvetica','normal');doc.setFontSize(5.5);doc.setTextColor(...MC);doc.text(t,x,y);};
+  const val=(t,x,y)=>{doc.setFont('helvetica','bold');doc.setFontSize(7.5);doc.setTextColor(...BLK);doc.text((t||'—').toString().substring(0,42),x,y);};
+  const divL=(y)=>{doc.setDrawColor(200,210,220);doc.setLineWidth(0.2);doc.line(margin+2,y,pW-margin-2,y);};
+  lbl('BILLING ENTITY',bm,by+3);val(d.billingEntity||d.customerName||d.companyName,bm,by+7);
+  lbl('DESCRIPTOR',bm+hw+4,by+3);val(d.descriptor||d._descriptor||'—',bm+hw+4,by+7);
+  divL(by+9.5);
+  lbl('SITE LOCATION / END USER',bm,by+12.5);val(d.siteLocationName||d._siteLocationName||'—',bm,by+16.5);
+  lbl('BDM',bm+hw+4,by+12.5);val(d.bdmName||d.completedBy||d.assessedBy||d.auditorName||'—',bm+hw+4,by+16.5);
+  divL(by+19);
+  lbl('ADDRESS',bm,by+22);
+  const addr=[d.siteAddress,d.suburb,d.state,d.postcode].filter(Boolean).join(', ')||'—';
+  doc.setFont('helvetica','normal');doc.setFontSize(7.5);doc.setTextColor(...BLK);
+  doc.text(addr.substring(0,65),bm,by+26);
+  divL(by+28.5);
+  lbl('SITE CONTACT',bm,by+31.5);
+  const bizN=(d.c1?.name||d.contactName||d.siteContact||d.bizContactName||'—');
+  doc.setFont('helvetica','bold');doc.setFontSize(7.5);doc.setTextColor(...BLK);
+  doc.text(bizN.substring(0,28),bm,by+35.5);
+  const bizP=d.c1?.phone||d.contactMobile||d.contactPhone||d.bizContactPhone||'';
+  const bizE=d.c1?.email||d.contactEmail||d.bizContactEmail||'';
+  doc.setFont('helvetica','normal');doc.setFontSize(7);
+  if(bizP){doc.setTextColor(...GRAY);doc.text(bizP,bm+48,by+35.5);}
+  if(bizE){doc.setTextColor(...BLUE);doc.text(bizE.substring(0,32),bm+74,by+35.5);}
+  return by+37+4;
+}
+
+async function generatePDF(returnDoc=false, presetData=null) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
+  const d = presetData || collectData();
+  const margin=15, pageW=210, cW=pageW-margin*2;
+  let y = margin;
+  const PURPLE=[91,33,182], PURPLE_L=[237,233,254], GRAY=[108,117,125], GL=[240,242,244], WHITE=[255,255,255];
+
+  function chk(n=20) { if(y+n>280){doc.addPage();y=margin;} }
+  function secHdr(t) { chk(14); doc.setFillColor(...PURPLE); doc.roundedRect(margin,y,cW,9,1.5,1.5,'F'); doc.setTextColor(255,255,255); doc.setFontSize(10); doc.setFont('helvetica','bold'); doc.text(t,margin+3,y+6); y+=12; }
+  function fRow(l,v) { chk(8); doc.setTextColor(...GRAY); doc.setFontSize(7); doc.setFont('helvetica','normal'); doc.text(l,margin,y); doc.setTextColor(30,40,50); doc.setFontSize(9); const lines=doc.splitTextToSize(v||'—',cW-2); doc.text(lines,margin,y+4); y+=4+lines.length*4+3; }
+  function twoRow(l1,v1,l2,v2) { chk(12); const hw=cW/2-2; doc.setTextColor(...GRAY); doc.setFontSize(7); doc.setFont('helvetica','normal'); doc.text(l1,margin,y); doc.text(l2,margin+cW/2+2,y); y+=4; doc.setTextColor(30,40,50); doc.setFontSize(9); const a=doc.splitTextToSize(v1||'—',hw), b=doc.splitTextToSize(v2||'—',hw); doc.text(a,margin,y); doc.text(b,margin+cW/2+2,y); y+=Math.max(a.length,b.length)*4+4; }
+
+  // ── STANDARD HEADER (softened purple ~35%) ──
+  y = drawStdHeader(doc, d, 'Prospect / Client Form', [148,111,208], [245,242,255]);
+
+  // S1
+  secHdr('1. CLIENT DETAILS');
+  twoRow('Billing Entity',d.billingEntity||d.companyName,'Generated Site Name',d.generatedSiteName);
+  fRow('Site Address',[d.siteAddress,d.suburb,d.state,d.postcode].filter(Boolean).join(', '));
+
+  // S2
+  secHdr('2. CONTACTS');
+  if (d.podEmail) fRow('Proof of Delivery (POD) Email',d.podEmail);
+  if (d.podEmail2) fRow('Additional POD Email',d.podEmail2);
+  if (d.podEmail3) fRow('Additional POD Email',d.podEmail3);
+  twoRow('Site Contact',d.c1?.name||d.contactName,'Title / Role',d.c1?.role||d.contactRole);
+  twoRow('Phone',d.c1?.phone||d.contactMobile,'Email',d.c1?.email||d.contactEmail);
+  if (d.c2?.name) {
+    twoRow('Key Decision Maker',d.c2.name,'Title / Role',d.c2.role||'—');
+    twoRow('Phone',d.c2.phone||'—','Email',d.c2.email||'—');
+  }
+  if (d.c3?.name) {
+    twoRow('Logistics Contact',d.c3.name,'Title / Role',d.c3.role||'—');
+    twoRow('Phone',d.c3.phone||'—','Email',d.c3.email||'—');
+  }
+  if (d.c4?.name) {
+    twoRow('Admin / Invoicing Contact',d.c4.name,'Title / Role',d.c4.role||'—');
+    twoRow('Phone',d.c4.phone||'—','Email',d.c4.email||'—');
+  }
+  if (d.c5?.name) {
+    twoRow(d.c5.label||'Other Contact',d.c5.name,'Title / Role',d.c5.role||'—');
+    twoRow('Phone',d.c5.phone||'—','Email',d.c5.email||'—');
+  }
+
+  // S3
+  secHdr('3. OPPORTUNITY');
+  twoRow('Product Interest',d.productInterest||'—','Current Supplier',d.currentSupplier||'—');
+  twoRow('Estimated Volume',d.estVolume||'—','Estimated Current Price',d.estCurrentPrice||'—');
+  if (d.isDistributor) fRow('Distributor / Reseller Site',d.isDistributor==='Y'?'Yes':'No');
+
+  // S4
+  secHdr('4. CONVERSATION');
+  fRow('Conversation Notes',d.convNotes);
+  twoRow('Follow-Up Date',d.followupDate||'—','Follow-Up Action',d.followupAction||'—');
+
+  // S5
+  secHdr('5. SIGN-OFF');
+  twoRow('BDM',d.bdmName,'Email',d.bdmEmail);
+
+  // Footer
+  const tp = doc.getNumberOfPages();
+  for (let p=1;p<=tp;p++) {
+    doc.setPage(p); doc.setFillColor(...GL); doc.rect(0,287,210,10,'F');
+    doc.setTextColor(...GRAY); doc.setFontSize(6.5); doc.setFont('helvetica','normal');
+    doc.text('BioBlue Prospect / Client Form · Confidential · V1 2026',margin,293);
+    doc.text(`Page ${p} of ${tp}`,pageW-margin,293,{align:'right'});
+    doc.text(new Date().toLocaleString('en-AU'),pageW/2,293,{align:'center'});
+  }
+
+  if (returnDoc) return doc;
+  doc.save(((d.generatedSiteName||d.companyName||'Draft').replace(/[^a-zA-Z0-9\s]/g,'').trim().replace(/\s+/g,'_'))+'.Client.pdf');
+  showToast('📄 PDF downloaded!');
+}
+
+// =====================================================================
+// DRIVE UPLOAD + CLIENT RECORD
+// =====================================================================
+async function getDriveToken() {
+  if (gdriveToken) return;
+  await new Promise((resolve,reject) => {
+    const client = google.accounts.oauth2.initTokenClient({
+      client_id: GDRIVE_CLIENT_ID,
+      scope: 'https://www.googleapis.com/auth/drive.file',
+      callback: r => { if(r.access_token){gdriveToken=r.access_token;resolve();}else reject(new Error(r.error||'Sign-in failed')); },
+      error_callback: e => reject(new Error(e.message||'Sign-in failed'))
+    });
+    client.requestAccessToken({ prompt:'' });
+  });
+}
+
+async function getFolderId() {
+  const r = await fetch(`https://www.googleapis.com/drive/v3/files?q=name='${GDRIVE_FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false&fields=files(id)`, { headers:{ Authorization:`Bearer ${gdriveToken}` } });
+  const d = await r.json();
+  if (d.files && d.files.length > 0) return d.files[0].id;
+  const cr = await fetch('https://www.googleapis.com/drive/v3/files', { method:'POST', headers:{ Authorization:`Bearer ${gdriveToken}`, 'Content-Type':'application/json' }, body:JSON.stringify({ name:GDRIVE_FOLDER_NAME, mimeType:'application/vnd.google-apps.folder' }) });
+  return (await cr.json()).id;
+}
+
+// =====================================================================
+// SELF-HEALING COLUMN REPAIR — patches an existing live spreadsheet
+// that may still have the old stale header row, by appending any
+// missing canonical columns (and extending data rows to match).
+// =====================================================================
+function repairClientRecordsHeaders(wb) {
+  const ws = wb.Sheets['Client Records'];
+  if (!ws) return;
+  const CANONICAL = [
+    'Client ID','Billing Entity','Site Name','Site Location Name','Descriptor','Trackpod Name',
+    'Street Address','Suburb','State','Postcode',
+    'Business Contact Name','Business Contact Role','Business Contact Email','Business Contact Phone',
+    'KDM Name','KDM Role','KDM Email','KDM Phone',
+    'Logistics Name','Logistics Role','Logistics Email','Logistics Phone',
+    'Admin Contact Name','Admin Contact Role','Admin Contact Email','Admin Contact Phone',
+    'Other Contact Label','Other Contact Name','Other Contact Role','Other Contact Email','Other Contact Phone',
+    'POD Email','POD Email 2','POD Email 3',
+    'Contact Name','Contact Title','Contact Mobile','Contact Email',
+    'Product Interest','Current Supplier','Estimated Volume','Estimated Current Price','Active Products',
+    'Is Distributor / Reseller','Additional Invoicing Emails','PO Required','PO Delivery Email',
+    'BDM Email','Max Vehicle Size','Latest Note',
+    'Prospect \u2713','Quote Sent \u2713','Site Admin \u2713','Site Audit \u2713','Pkg Assessment \u2713','Customer \u2713',
+    'Prospect Doc #','Admin Doc #','Audit Doc #','Packaged Doc #','Quote Doc #','Record Status',
+    'Drive Folder ID','Created Date','Created By','Notes Log'
+  ];
+  const rows = XLSX.utils.sheet_to_json(ws, { header:1 });
+  if (!rows.length) return;
+  const existing = rows[0] || [];
+  const missing  = CANONICAL.filter(c => !existing.includes(c));
+  if (!missing.length) return; // already up to date
+  const newHeaders = [...existing, ...missing];
+  rows[0] = newHeaders;
+  for (let i=1; i<rows.length; i++) {
+    while (rows[i].length < newHeaders.length) rows[i].push('');
+  }
+  wb.Sheets['Client Records'] = XLSX.utils.aoa_to_sheet(rows);
+  console.log('Repaired Client Records headers — added:', missing);
+}
+
+async function createClientRecord(d, folderId, existingClientId) {
+  const fileId = await getAdminSheetId(folderId);
+  if (!fileId) { console.warn('Could not get admin sheet'); return null; }
+  const dl = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, { headers:{ Authorization:`Bearer ${gdriveToken}` } });
+  const ab = await dl.arrayBuffer();
+  const wb = XLSX.read(new Uint8Array(ab), { type:'array' });
+  repairClientRecordsHeaders(wb);
+  const ws = wb.Sheets['Client Records'];
+  const rows = XLSX.utils.sheet_to_json(ws, { header:1 });
+  const headers = rows[0] || [];
+
+  const idCol = headers.indexOf('Client ID');
+  let rowIdx = -1;
+  if (existingClientId) {
+    rowIdx = rows.findIndex((r,i) => i>0 && (r[idCol]||'').toString() === existingClientId);
+  }
+  const isUpdate = rowIdx > -1;
+
+  // Client ID — reuse existing, or generate a fresh sequential one
+  const newId = isUpdate ? existingClientId : (() => {
+    const existingIds = rows.slice(1).map(r=>r[0]).filter(Boolean);
+    const maxId = existingIds.reduce((m,id) => { const n=parseInt((id+'').replace('BB-','')); return isNaN(n)?m:n>m?n:m; }, 0);
+    return `BB-${String(maxId+1).padStart(4,'0')}`;
+  })();
+
+  // Per-form-type document counter — increments on every Prospect submission for this client
+  const docCountCol = headers.indexOf('Prospect Doc #');
+  const prevCount = isUpdate && docCountCol>-1 ? (parseInt(rows[rowIdx][docCountCol]) || 0) : 0;
+  const docCount = prevCount + 1;
+
+  const noteEntry = `[Prospect — ${new Date().toLocaleDateString('en-AU')}, ${d.bdmName}]\nProduct Interest: ${d.productInterest}\nCurrent Supplier: ${d.currentSupplier||'Unknown'}\nEst. Volume: ${d.estVolume||'Unknown'}\n${d.convNotes}\nFollow-up: ${d.followupDate||'—'} — ${d.followupAction||'—'}`;
+
+  const targetRow = isUpdate ? rows[rowIdx] : new Array(headers.length).fill('');
+  const set = (col,val) => { const i=headers.indexOf(col); if(i>-1) targetRow[i]=val; };
+
+  set('Client ID',     newId);
+  set('Billing Entity',d.billingEntity||d.companyName);
+  set('Site Name',     d.generatedSiteName||d.companyName);
+  set('Site Location Name', d.siteLocationName);
+  set('Trackpod Name', d.trackpodName);
+  set('Descriptor',    d.descriptor);
+  set('Street Address',d.siteAddress);
+  set('Suburb',        d.suburb);
+  set('State',         d.state);
+  set('Postcode',      d.postcode);
+  // Contact 1 — Site Contact
+  set('Business Contact Name',  d.c1.name);
+  set('Business Contact Role',  d.c1.role);
+  set('Business Contact Email', d.c1.email);
+  set('Business Contact Phone', d.c1.phone);
+  // Contact 2 — Key Decision Maker
+  set('KDM Name',  d.c2.name);
+  set('KDM Role',  d.c2.role);
+  set('KDM Email', d.c2.email);
+  set('KDM Phone', d.c2.phone);
+  // Contact 3 — Logistics
+  set('Logistics Name',  d.c3.name);
+  set('Logistics Role',  d.c3.role);
+  set('Logistics Email', d.c3.email);
+  set('Logistics Phone', d.c3.phone);
+  // Contact 4 — Admin / Invoicing
+  set('Admin Contact Name',  d.c4.name);
+  set('Admin Contact Role',  d.c4.role);
+  set('Admin Contact Email', d.c4.email);
+  set('Admin Contact Phone', d.c4.phone);
+  // Contact 5 — Other
+  set('Other Contact Label', d.c5.label);
+  set('Other Contact Name',  d.c5.name);
+  set('Other Contact Role',  d.c5.role);
+  set('Other Contact Email', d.c5.email);
+  set('Other Contact Phone', d.c5.phone);
+  // Legacy aliases (backward compat for existing records)
+  set('Contact Name',  d.c1.name);
+  set('Contact Title', d.c1.role);
+  set('Contact Mobile',d.c1.phone);
+  set('Contact Email', d.c1.email);
+  set('Prospect ✓',   '✓');
+  set('Prospect Doc #', docCount);
+  // Opportunity
+  set('Product Interest',   d.productInterest);
+  set('Current Supplier',   d.currentSupplier);
+  set('Estimated Volume',   d.estVolume);
+  set('Estimated Current Price', d.estCurrentPrice);
+  set('Is Distributor / Reseller', d.isDistributor);
+  // Shared cross-form fields
+  set('POD Email', d.podEmail);
+  set('POD Email 2', d.podEmail2);
+  set('POD Email 3', d.podEmail3);
+  set('BDM Email', d.bdmEmail);
+  // Latest Note — snapshot of most recent conversation note (overwritten each time)
+  if (d.convNotes && d.convNotes.trim()) set('Latest Note', d.convNotes.trim());
+  // Record Status — only set on brand-new records; never overwrite on update
+  // (preserves "Client" status if Admin/Audit/Packaged already converted this record)
+  if (!isUpdate) set('Record Status', 'Prospect');
+
+  if (isUpdate) {
+    // Preserve original creation metadata; append to Notes Log rather than overwrite
+    const notesColIdx = headers.indexOf('Notes Log');
+    if (notesColIdx > -1) {
+      const existingNotes = (targetRow[notesColIdx]||'').toString();
+      targetRow[notesColIdx] = existingNotes ? existingNotes + '\n\n' + noteEntry : noteEntry;
+    }
+    rows[rowIdx] = targetRow;
+  } else {
+    set('Created Date',  new Date().toLocaleDateString('en-AU'));
+    set('Created By',    d.bdmName);
+    set('Notes Log',     noteEntry);
+    rows.push(targetRow);
+  }
+
+  // Notes Log tab — always append a fresh timestamped entry regardless of update/create
+  const nws = wb.Sheets['Notes Log'];
+  if (nws) {
+    const nr = XLSX.utils.sheet_to_json(nws, { header:1 });
+    nr.push([newId, d.companyName, '', new Date().toLocaleString('en-AU'), isUpdate?'Prospect Update':'Prospect', d.bdmName, d.convNotes]);
+    wb.Sheets['Notes Log'] = XLSX.utils.aoa_to_sheet(nr);
+  }
+
+  const notesCol = headers.indexOf('Notes Log');
+  const newWs = XLSX.utils.aoa_to_sheet(rows);
+  newWs['!cols'] = headers.map((h,i) => ({ wch: i===notesCol?60:i<4?20:16 }));
+  newWs['!freeze'] = { xSplit:0, ySplit:1 };
+  wb.Sheets['Client Records'] = newWs;
+
+  const out = XLSX.write(wb, { bookType:'xlsx', type:'array' });
+  const blob = new Blob([out], { type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const form = new FormData();
+  form.append('metadata', new Blob([JSON.stringify({})], { type:'application/json' }));
+  form.append('file', blob, CLIENT_RECORDS_NAME);
+  const _upRes = await fetch(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=multipart`, { method:'PATCH', headers:{ Authorization:`Bearer ${gdriveToken}` }, body:form });
+  if (!_upRes.ok) throw new Error(`Client record save failed (${_upRes.status})`);
+  return { newId, docCount, isUpdate };
+}
+
+// PDF removed from Prospect/Client form — data captured in client record
+
+// =====================================================================
+// CONVERSATION LOG — append timestamped note (update mode only, no PDF)
+// =====================================================================
+async function appendConversationNote(d) {
+  const clientId = new URLSearchParams(window.location.search).get('client');
+  if (!clientId) { showToast('⚠️ No client ID in URL — cannot log note'); return; }
+
+  showToast('☁️ Connecting to Google...');
+  try {
+    await getDriveToken();
+    const fr = await fetch(
+      `https://www.googleapis.com/drive/v3/files?q=name='BioBlue Audits' and mimeType='application/vnd.google-apps.folder' and trashed=false&fields=files(id)`,
+      { headers: { Authorization: `Bearer ${gdriveToken}` } }
+    );
+    const fd = await fr.json();
+    if (!fd.files || !fd.files.length) { showToast('⚠️ BioBlue Audits folder not found'); return; }
+
+    const fileId = await getAdminSheetId(fd.files[0].id);
+    if (!fileId) { showToast('⚠️ Could not access client records'); return; }
+
+    showToast('📊 Loading client record...');
+    const dl = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, { headers: { Authorization: `Bearer ${gdriveToken}` } });
+    const ab = await dl.arrayBuffer();
+    const wb = XLSX.read(new Uint8Array(ab), { type: 'array' });
+    repairClientRecordsHeaders(wb);
+
+    const ws   = wb.Sheets['Client Records'];
+    const rows = XLSX.utils.sheet_to_json(ws, { header: 1 });
+    const hdrs = rows[0] || [];
+    const idCol   = hdrs.indexOf('Client ID');
+    const nameCol = hdrs.indexOf('Billing Entity');
+    const siteCol = hdrs.indexOf('Site Name');
+    const notesCol = hdrs.indexOf('Notes Log');
+
+    const rowIdx = rows.slice(1).findIndex(r => (r[idCol]||'').toString() === clientId);
+    const clientRow = rowIdx > -1 ? rows[rowIdx + 1] : [];
+    const billingName = (clientRow && clientRow[nameCol]) ? clientRow[nameCol].toString() : '';
+    const siteName    = (clientRow && clientRow[siteCol])  ? clientRow[siteCol].toString()  : '';
+
+    // Build timestamped note
+    const timestamp = new Date().toLocaleString('en-AU');
+    const noteParts = [ d.convNotes.trim() ];
+    if (d.productInterest) noteParts.push(`Interest: ${d.productInterest}`);
+    if (d.currentSupplier) noteParts.push(`Supplier: ${d.currentSupplier}`);
+    if (d.estVolume)       noteParts.push(`Est. Vol: ${d.estVolume}`);
+    if (d.followupDate)    noteParts.push(`Follow-up: ${d.followupDate}${d.followupAction ? ' — ' + d.followupAction : ''}`);
+    const noteText = noteParts.join(' | ');
+
+    // Append to Notes Log tab
+    const nws = wb.Sheets['Notes Log'];
+    if (nws) {
+      const nr = XLSX.utils.sheet_to_json(nws, { header: 1 });
+      nr.push([clientId, billingName, siteName, timestamp, 'Update', d.bdmName, noteText]);
+      wb.Sheets['Notes Log'] = XLSX.utils.aoa_to_sheet(nr);
+    }
+
+    // Append to Notes Log column in Client Records row
+    if (rowIdx > -1 && notesCol > -1) {
+      const existing = (rows[rowIdx + 1][notesCol] || '').toString();
+      rows[rowIdx + 1][notesCol] = existing
+        ? existing + '\n\n[Update — ' + timestamp + ', ' + d.bdmName + ']\n' + noteText
+        : '[Update — ' + timestamp + ', ' + d.bdmName + ']\n' + noteText;
+      wb.Sheets['Client Records'] = XLSX.utils.aoa_to_sheet(rows);
+    }
+
+    // Write workbook back
+    showToast('☁️ Saving to Drive...');
+    const out  = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    const blob = new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const form = new FormData();
+    form.append('metadata', new Blob([JSON.stringify({})], { type: 'application/json' }));
+    form.append('file', blob, CLIENT_RECORDS_NAME);
+    await fetch(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=multipart`, { method: 'PATCH', headers: { Authorization: `Bearer ${gdriveToken}` }, body: form });
+
+    // Send calendar invite if follow-up date set
+    if (d.followupDate) {
+      showToast('📅 Sending calendar invite...');
+      sendCalendarInvite(d);
+    }
+
+    const _noteModalBtns = document.getElementById('modalContactButtons');
+    if (_noteModalBtns) _noteModalBtns.innerHTML = '';
+    document.getElementById('modalMsg').textContent =
+      `✅ Conversation log updated!\n\n🏢 ${billingName || clientId}\n🕐 ${timestamp}\n📝 ${d.bdmName}\n\n${d.convNotes.trim()}` +
+      (d.followupDate ? `\n\n📅 Follow-up: ${d.followupDate}${d.followupAction ? ' — ' + d.followupAction : ''}` : '');
+    document.getElementById('modal').classList.add('active');
+    showToast('✅ Note saved to Drive!');
+
+  } catch(e) {
+    gdriveToken = null;
+    showToast('⚠️ Save failed: ' + e.message);
+    document.getElementById('modalMsg').textContent = '⚠️ Note save failed:\n' + e.message + '\n\nPlease try again or copy notes manually.';
+    document.getElementById('modal').classList.add('active');
+  }
+}
+
+async function uploadAndSend() {
+  const d = collectData();
+  if (!d.bdmName) { showToast('⚠️ Please select your name'); return; }
+
+  if (window._siteNameTooLong) {
+    showToast('⚠️ Generated Site Name is over 50 characters — shorten Billing Entity or Site Tag Name before submitting');
+    const out = document.getElementById('generatedSiteName');
+    if (out) out.scrollIntoView({ behavior:'smooth', block:'center' });
+    return;
+  }
+
+  // ── UPDATE MODE — append conversation note, no PDF ──
+  const _isUpdate = new URLSearchParams(window.location.search).get('mode') === 'update';
+  if (_isUpdate) {
+    if (!d.convNotes || !d.convNotes.trim()) {
+      showToast('⚠️ Please enter conversation notes before saving');
+      // Scroll to the conversation section
+      const convEl = document.getElementById('convNotes');
+      if (convEl) { const s = document.getElementById('s4'); if(s && s.classList.contains('collapsed')) toggleSection('s4'); setTimeout(() => convEl.scrollIntoView({ behavior:'smooth', block:'center' }), 200); }
+      return;
+    }
+    await appendConversationNote(d);
+    return;
+  }
+
+  if (!d.billingEntity || !d.billingEntity.trim()) { showToast('⚠️ Customer Billing Entity required'); return; }
+  if (!d.suburb || !d.suburb.trim()) { showToast('⚠️ Suburb required'); return; }
+  if (!d.state) { showToast('⚠️ State required'); return; }
+  if (!d.prospectDate) { showToast('⚠️ Date required'); return; }
+
+  const existingClientId = new URLSearchParams(window.location.search).get('client');
+
+  // ── HARD BLOCK — duplicate site name with no client loaded ──
+  // (skipped entirely when a client is already loaded — that's a legitimate update, not a duplicate)
+  if (!existingClientId && d.generatedSiteName) {
+    showToast('🔍 Checking for duplicates...');
+    try {
+      await getDriveToken();
+      const dupe = await checkDuplicateSiteName(d.generatedSiteName);
+      if (dupe.isDupe) {
+        document.getElementById('modalMsg').textContent =
+          '🚫 This site already exists in the system:\n\n"' + dupe.existingName + '"' +
+          (dupe.existingId ? '  (' + dupe.existingId + ')' : '') + '\n\n' +
+          'To avoid creating duplicate client records, please go back to Field Tools, search for this client, and load it instead — you\'ll be able to edit and update it from there.';
+        document.getElementById('modalFieldToolsBtn').style.display = 'inline-block';
+        document.getElementById('modal').classList.add('active');
+        showToast('🚫 Duplicate blocked — load the existing client instead');
+        return;
+      }
+    } catch(e) {
+      console.warn('Duplicate pre-check skipped:', e.message);
+    }
+  }
+
+  try {
+    showToast('☁️ Connecting to Google...');
+    await getDriveToken();
+    const folderId = await getFolderId();
+
+    // Use the stored folder ID when updating an existing client (protects against
+    // the folder name drifting if site details are edited); otherwise create fresh.
+    const clientFolderName = d.generatedSiteName || d.companyName || 'Unknown Client';
+    showToast('📁 Preparing client folder...');
+    const clientFolderId = existingClientId
+      ? await getClientFolderFromRecord(folderId, existingClientId, clientFolderName)
+      : await getOrCreateClientFolder(folderId, clientFolderName);
+
+    // Create or update client record FIRST — gives us the doc counter for the PDF header
+    showToast('📊 Saving client record...');
+    const result = await createClientRecord(d, folderId, existingClientId);
+    if (!result) throw new Error('Could not save client record');
+    const { newId, docCount, isUpdate } = result;
+    d.docRef = newId + (docCount ? '-' + docCount : '');
+
+    showToast('⏳ Generating PDF...');
+    const pdfDoc = await generatePDF(true, d);
+    const pdfBlob = pdfDoc.output('blob');
+    const baseName = ((d.generatedSiteName||d.companyName||'Draft').replace(/[^a-zA-Z0-9\s]/g,'').trim().replace(/\s+/g,'_'))+'.Client';
+
+    // Upload PDF — overwrite existing file of the same name if present, never duplicate
+    const existingFileId = await findExistingFile('.Client.pdf', clientFolderId);
+    const form = new FormData();
+    let up;
+    if (existingFileId) {
+      form.append('metadata', new Blob([JSON.stringify({})], { type:'application/json' }));
+      form.append('file', pdfBlob, baseName+'.pdf');
+      up = await fetch(`https://www.googleapis.com/upload/drive/v3/files/${existingFileId}?uploadType=multipart&fields=id,webViewLink`, { method:'PATCH', headers:{ Authorization:`Bearer ${gdriveToken}` }, body:form });
+    } else {
+      form.append('metadata', new Blob([JSON.stringify({ name:baseName+'.pdf', parents:[clientFolderId] })], { type:'application/json' }));
+      form.append('file', pdfBlob, baseName+'.pdf');
+      up = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink', { method:'POST', headers:{ Authorization:`Bearer ${gdriveToken}` }, body:form });
+    }
+    if (!up.ok) throw new Error(`PDF upload failed (${up.status}) — Drive session may have expired, try reloading`);
+    const uploaded = await up.json();
+    if (!uploaded.id) throw new Error('PDF upload returned no file ID');
+
+    // Save folder ID to client record for other forms to use, and the form snapshot —
+    // non-fatal individually, but surfaced distinctly since the PDF has already landed
+    let _followUpWarning = '';
+    try {
+      if (newId && clientFolderId) {
+        await saveClientFolderIdToRecord(folderId, newId, clientFolderId);
+      }
+      await saveFormSnapshot(d, clientFolderId);
+    } catch(followErr) {
+      console.error('Post-upload save failed:', followErr);
+      _followUpWarning = `\n\n⚠️ Follow-up save failed: ${followErr.message}\n(PDF is safe on Drive — but folder linkage or snapshot may be incomplete)`;
+    }
+
+    // Send calendar invite if follow-up date set
+    if (d.followupDate) {
+      showToast('📅 Sending calendar invite...');
+      sendCalendarInvite(d);
+    }
+
+    // Build "Save to Phone" buttons for every contact that was filled in —
+    // replaces the old auto-triggered single-contact download, which mobile
+    // browsers can silently block since it wasn't a direct user gesture
+    buildContactSaveButtons(d);
+
+    document.getElementById('modalMsg').textContent = `✅ Prospect ${isUpdate?'updated':'submitted'}!\n\n🆔 Document Ref: ${d.docRef}\n☁️ PDF ${existingFileId?'updated':'uploaded'} to Google Drive\n📊 Client record ${isUpdate?'updated':'created'} — Prospect ✓${d.followupDate ? '\n📅 Calendar invite sent to '+d.bdmEmail : ''}${_followUpWarning}`;
+    redirectToFieldTools(newId||'');
+    document.getElementById('modal').classList.add('active');
+
+  } catch(e) {
+    gdriveToken = null;
+    const wrap = document.getElementById('modalContactButtons');
+    if (wrap) wrap.innerHTML = '';
+    document.getElementById('modalMsg').textContent = `⚠️ Save failed: ${e.message}\n\nPlease try again.`;
+    document.getElementById('modal').classList.add('active');
+  }
+}
+
+// =====================================================================
+// FIND EXISTING FILE BY NAME — used to overwrite rather than duplicate
+// =====================================================================
+async function findExistingFile(suffix, folderId) {
+  try {
+    const sr = await fetch(
+      `https://www.googleapis.com/drive/v3/files?q=name contains '${suffix.replace(/'/g,"\\'")}' and '${folderId}' in parents and trashed=false&fields=files(id,name)`,
+      { headers: { Authorization: `Bearer ${gdriveToken}` } }
+    );
+    const sd = await sr.json();
+    return (sd.files && sd.files.length) ? sd.files[0].id : null;
+  } catch(e) {
+    console.warn('findExistingFile check failed:', e.message);
+    return null;
+  }
+}
+
+// =====================================================================
+// CLEAR + UTILS
+// =====================================================================
+function confirmClear() {
+  if (confirm('Clear all form data?')) { clearAll(); showToast('✅ Form cleared'); }
+}
+function clearAll() {
+  ['billingEntity','siteLocationName','generatedSiteName','trackpodName','companyName','prospectDate',
+   'siteAddress','suburb','postcode',
+   'c1Name','c1Role','c1Email','c1Phone',
+   'c2Name','c2Role','c2Email','c2Phone',
+   'c3Name','c3Role','c3Email','c3Phone',
+   'c4Name','c4Role','c4Email','c4Phone',
+   'c5Label','c5Name','c5Role','c5Email','c5Phone',
+   'podEmail','podEmail2','podEmail3','currentSupplier','estVolume','estCurrentPrice','isDistributor','convNotes',
+   'followupDate','followupAction','bdmEmail'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.value=''; el.readOnly=false; el.classList.remove('linked'); }
+  });
+  // Reset same-as dropdowns
+  [2,3,4,5].forEach(n => {
+    const sel = document.getElementById(`c${n}SameAs`); if(sel) sel.selectedIndex=0;
+    const badge = document.getElementById(`c${n}LinkedBadge`); if(badge) badge.style.display='none';
+  });
+  // Reset Is Distributor Y/N visual state
+  const distItem = document.getElementById('yn-distributor');
+  if (distItem) distItem.querySelectorAll('.yn-btn').forEach(b => b.classList.remove('active-y','active-n'));
+  document.getElementById('state').selectedIndex = 0;
+  document.getElementById('descriptor').selectedIndex = 0;
+  document.getElementById('bdmName').selectedIndex = 0;
+  setInterest('');
+  productInterest = '';
+  updateProgress();
+}
+function toggleSection(id) { const b=document.getElementById(id),t=document.getElementById('toggle-'+id); if(!b)return; const c=b.classList.toggle('collapsed'); if(t)t.textContent=c?'▶':'▼'; }
+function closeModal() {
+  document.getElementById('modal').classList.remove('active');
+  const wrap = document.getElementById('modalContactButtons');
+  if (wrap) wrap.innerHTML = '';
+}
+function showToast(msg) { const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2500); }
+
+// INIT
+document.addEventListener('DOMContentLoaded', () => {
+  try { if(typeof emailjs!=='undefined') emailjs.init(EMAILJS_PUBLIC_KEY); } catch(e) {}
+  document.getElementById('prospectDate').value
+  loadClientFromURL();
+  document.getElementById('prospectDate').value = new Date().toISOString().split('T')[0];
+  document.getElementById('bdmName').value = 'Michael Hodnett';
+  document.getElementById('bdmNameTop').value = 'Michael Hodnett';
+  autoFill('Michael Hodnett');
+  updateProgress();
+
+  // ── UPDATE MODE UI ──
+  const _urlMode = new URLSearchParams(window.location.search).get('mode');
+  if (_urlMode === 'update') {
+    // Inject update mode banner
+    const banner = document.getElementById('updateModeBanner');
+    if (banner) banner.style.display = 'flex';
+    // Collapse sections that aren't relevant to a quick note update
+    ['s1','s2','s3'].forEach(id => {
+      const el = document.getElementById(id);
+      const tg = document.getElementById('toggle-' + id);
+      if (el && !el.classList.contains('collapsed')) { el.classList.add('collapsed'); if(tg) tg.textContent='▶'; }
+    });
+    // Open conversation section
+    const s4 = document.getElementById('s4');
+    const t4 = document.getElementById('toggle-s4');
+    if (s4) { s4.classList.remove('collapsed'); if(t4) t4.textContent='▼'; }
+    // Update submit button labels
+    document.querySelectorAll('[data-submit-btn]').forEach(btn => {
+      btn.textContent = '💬 Save Conversation Note';
+    });
+    // Hide quick-submit block (it's replaced by the update banner)
+    const quickSubmit = document.getElementById('quickSubmitBlock');
+    if (quickSubmit) quickSubmit.style.display = 'none';
+  }
+});
+
+// =====================================================================
+// CLIENT PRE-FILL — reads ?client=BB-XXXX from URL
+// =====================================================================
+async function loadClientFromURL() {
+  const params   = new URLSearchParams(window.location.search);
+  const clientId = params.get('client');
+  const banner   = document.getElementById('clientBanner');
+  const noBanner = document.getElementById('noClientBanner');
+
+  if (!clientId) {
+    if (noBanner) noBanner.style.display = 'flex';
+    return;
+  }
+
+  // Show the banner immediately with the client name from session (no token needed).
+  if (banner) {
+    banner.style.display = 'flex';
+    document.getElementById('bannerClientId').textContent = 'Ref: ' + clientId;
+    try {
+      const _sessName = sessionStorage.getItem('bb_selected_client_name');
+      const _nm = document.getElementById('bannerClientName');
+      if (_nm) _nm.textContent = _sessName || 'Tap below to load full details';
+    } catch(e) {}
+  }
+
+  // If we already hold a token (rare on a fresh page), fetch straight away.
+  // Otherwise show the "Tap to load" button so the token popup fires from a
+  // real user gesture (browsers block popups opened without a click).
+  if (gdriveToken) {
+    fetchClientDetails(clientId);
+  } else {
+    showPrefillRetry(clientId);
+  }
+}
+
+async function fetchClientDetails(clientId) {
+  try {
+    // Acquire token if needed — this runs from a user tap, so the popup is allowed
+    if (!gdriveToken) {
+      let _waited = 0;
+      while ((typeof google === 'undefined' || !google.accounts || !google.accounts.oauth2) && _waited < 5000) {
+        await new Promise(r => setTimeout(r, 100));
+        _waited += 100;
+      }
+      if (typeof google === 'undefined' || !google.accounts || !google.accounts.oauth2) {
+        showPrefillRetry(clientId);
+        return;
+      }
+      await new Promise((resolve, reject) => {
+        const client = google.accounts.oauth2.initTokenClient({
+          client_id: GDRIVE_CLIENT_ID,
+          scope: 'https://www.googleapis.com/auth/drive.file',
+          callback: r => {
+            if (r.access_token) { gdriveToken = r.access_token; resolve(); }
+            else reject(new Error(r.error || 'Sign-in failed'));
+          },
+          error_callback: e => reject(new Error(e.message || 'Sign-in failed'))
+        });
+        client.requestAccessToken({ prompt: '' });
+      });
+    }
+
+    const fr = await fetch(
+      `https://www.googleapis.com/drive/v3/files?q=name='BioBlue Audits' and mimeType='application/vnd.google-apps.folder' and trashed=false&fields=files(id)`,
+      { headers: { Authorization: `Bearer ${gdriveToken}` } }
+    );
+    const fd  = await fr.json();
+    if (!fd.files || !fd.files.length) return;
+
+    const _sheetId = await getAdminSheetId(fd.files[0].id);
+    if (!_sheetId) return;
+
+    const dl  = await fetch(
+      `https://www.googleapis.com/drive/v3/files/${_sheetId}?alt=media`,
+      { headers: { Authorization: `Bearer ${gdriveToken}` } }
+    );
+    const ab   = await dl.arrayBuffer();
+    const wb   = XLSX.read(new Uint8Array(ab), { type: 'array' });
+    repairClientRecordsHeaders(wb);
+    const ws   = wb.Sheets['Client Records'];
+    const rows = XLSX.utils.sheet_to_json(ws, { header: 1 });
+    const hdrs = rows[0] || [];
+
+    const idCol = hdrs.indexOf('Client ID');
+    const row   = rows.slice(1).find(r => r[idCol] === clientId);
+    if (!row) { showToast('⚠️ Client ' + clientId + ' not found in records'); return; }
+
+    const get = col => { const i = hdrs.indexOf(col); return (i > -1 && row[i]) ? row[i].toString() : ''; };
+
+    const fields = {
+      billingEntity:     get('Billing Entity'),
+      siteLocationName:  get('Site Location Name'),
+      descriptor:        get('Descriptor'),
+      generatedSiteName: get('Site Name'),
+      trackpodName:      get('Trackpod Name'),
+      siteAddress:       get('Street Address'),
+      suburb:            get('Suburb'),
+      postcode:          get('Postcode'),
+      currentSupplier:   get('Current Supplier'),
+      estVolume:         get('Estimated Volume'),
+      estCurrentPrice:   get('Estimated Current Price'),
+      podEmail:          get('POD Email'),
+      podEmail2:         get('POD Email 2'),
+      podEmail3:         get('POD Email 3'),
+      // Contact 1 — Site Contact
+      c1Name:  get('Business Contact Name')  || get('Contact Name'),
+      c1Role:  get('Business Contact Role')  || get('Contact Title'),
+      c1Email: get('Business Contact Email') || get('Contact Email'),
+      c1Phone: get('Business Contact Phone') || get('Contact Mobile'),
+      // Contact 2 — Key Decision Maker
+      c2Name:  get('KDM Name'),
+      c2Role:  get('KDM Role'),
+      c2Email: get('KDM Email'),
+      c2Phone: get('KDM Phone'),
+      // Contact 3 — Logistics
+      c3Name:  get('Logistics Name'),
+      c3Role:  get('Logistics Role'),
+      c3Email: get('Logistics Email'),
+      c3Phone: get('Logistics Phone'),
+      // Contact 4 — Admin / Invoicing
+      c4Name:  get('Admin Contact Name'),
+      c4Role:  get('Admin Contact Role'),
+      c4Email: get('Admin Contact Email'),
+      c4Phone: get('Admin Contact Phone'),
+      // Contact 5 — Other
+      c5Label: get('Other Contact Label'),
+      c5Name:  get('Other Contact Name'),
+      c5Role:  get('Other Contact Role'),
+      c5Email: get('Other Contact Email'),
+      c5Phone: get('Other Contact Phone'),
+    };
+
+    Object.entries(fields).forEach(([id, val]) => {
+      const el = document.getElementById(id);
+      if (el && val) el.value = val;
+    });
+
+    // Apply the same "generated" visual treatment as generateSiteName() does
+    const _gsnEl = document.getElementById('generatedSiteName');
+    const _counterEl = document.getElementById('siteNameCharCount');
+    if (_gsnEl && _gsnEl.value) {
+      const _len = _gsnEl.value.length;
+      if (_len > 50) {
+        window._siteNameTooLong = true;
+        _gsnEl.style.background = '#fee2e2'; _gsnEl.style.color = '#b91c1c';
+        if (_counterEl) { _counterEl.textContent = `${_len}/50 characters — over limit. Shorten Billing Entity or Site Tag Name to continue.`; _counterEl.style.color = '#b91c1c'; _counterEl.style.fontWeight = '700'; }
+      } else {
+        window._siteNameTooLong = false;
+        _gsnEl.style.background = '#ede9fe'; _gsnEl.style.color = '#5b21b6';
+        if (_counterEl) { _counterEl.textContent = `${_len}/50 characters`; _counterEl.style.color = _len > 40 ? '#b45309' : 'var(--gray-mid)'; _counterEl.style.fontWeight = _len > 40 ? '700' : '400'; }
+      }
+    }
+    const _tpnEl = document.getElementById('trackpodName');
+    if (_tpnEl && _tpnEl.value) { _tpnEl.style.background = '#ede9fe'; _tpnEl.style.color = '#5b21b6'; }
+
+    // Product Interest uses a pill-button group, not a plain input — set via its own handler
+    const _productInterestVal = get('Product Interest');
+    if (_productInterestVal) setInterest(_productInterestVal);
+
+    const _isDistributorVal = get('Is Distributor / Reseller');
+    if (_isDistributorVal) setOpportunityYN('distributor', _isDistributorVal);
+
+    const stateVal = get('State');
+    const stateEl  = document.getElementById('state');
+    if (stateEl && stateVal) {
+      for (let i = 0; i < stateEl.options.length; i++) {
+        if (stateEl.options[i].value === stateVal) { stateEl.selectedIndex = i; break; }
+      }
+    }
+
+    const nameEl = document.getElementById('bannerClientName');
+    if (nameEl) nameEl.textContent = get('Billing Entity') || clientId;
+
+    // Show the next document reference (current count + 1) in the banner
+    const _prevCount = parseInt(get('Prospect Doc #')) || 0;
+    const _nextRef = clientId + '-' + (_prevCount + 1);
+    const bannerIdEl = document.getElementById('bannerClientId');
+    if (bannerIdEl) bannerIdEl.textContent = 'Ref: ' + clientId + '  ·  This submission will be ' + _nextRef;
+
+    // Hide the retry button once loaded
+    const rb = document.getElementById('prefillRetryBtn');
+    if (rb) rb.style.display = 'none';
+
+    if (typeof updateProgress === 'function') updateProgress();
+    showToast('✅ Client details loaded — ' + (get('Billing Entity') || clientId));
+
+    // Check Drive for a saved snapshot of this form for this client
+    try { await checkForSnapshot(fd.files[0].id, clientId); } catch(e) { /* non-critical */ }
+
+  } catch(e) {
+    showToast('⚠️ Could not load client — tap to retry');
+    showPrefillRetry(clientId);
+  }
+}
+
+
+// =====================================================================
+// AUTO-REDIRECT TO FIELD TOOLS AFTER SUBMISSION
+// =====================================================================
+function redirectToFieldTools(clientId) {
+  const base = 'https://michaelhodnett2022-coder.github.io/bioblue-field-tools';
+  const url  = clientId ? base + '?returning=' + clientId : base;
+  setTimeout(() => { window.location.href = url; }, 2500);
+}
+
+// =====================================================================
+// GET OR CREATE CLIENT FOLDER IN DRIVE
+// =====================================================================
+async function getOrCreateClientFolder(parentFolderId, folderName) {
+  // Search for existing folder with this name
+  const searchRes = await fetch(
+    `https://www.googleapis.com/drive/v3/files?q=name='${folderName.replace(/'/g,"\\'")}' and '${parentFolderId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false&fields=files(id,name)`,
+    { headers: { Authorization: `Bearer ${gdriveToken}` } }
+  );
+  if (!searchRes.ok) throw new Error(`Folder search failed (${searchRes.status}) — Drive session may have expired, try reloading`);
+  const searchData = await searchRes.json();
+  if (searchData.files && searchData.files.length > 0) {
+    return searchData.files[0].id;
+  }
+  // Create new folder
+  const createRes = await fetch('https://www.googleapis.com/drive/v3/files', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${gdriveToken}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: folderName, mimeType: 'application/vnd.google-apps.folder', parents: [parentFolderId] })
+  });
+  if (!createRes.ok) throw new Error(`Folder creation failed (${createRes.status}) — Drive session may have expired, try reloading`);
+  const created = await createRes.json();
+  if (!created.id) throw new Error('Folder creation returned no ID');
+  return created.id;
+}
+
+async function getClientFolderFromRecord(parentFolderId, clientId, fallbackName) {
+  // Try to get folder ID from client records spreadsheet
+  try {
+    const _sheetId = await getAdminSheetId(parentFolderId);
+    if (!_sheetId) throw new Error('Sheet not found');
+
+    const dl = await fetch(
+      `https://www.googleapis.com/drive/v3/files/${_sheetId}?alt=media`,
+      { headers: { Authorization: `Bearer ${gdriveToken}` } }
+    );
+    const ab  = await dl.arrayBuffer();
+    const wb  = XLSX.read(new Uint8Array(ab), { type: 'array' });
+    repairClientRecordsHeaders(wb);
+    const ws  = wb.Sheets['Client Records'];
+    const rows = XLSX.utils.sheet_to_json(ws, { header: 1 });
+    const hdrs = rows[0] || [];
+
+    const idCol     = hdrs.indexOf('Client ID');
+    const folderCol = hdrs.indexOf('Drive Folder ID');
+
+    if (folderCol > -1 && clientId) {
+      const row = rows.slice(1).find(r => r[idCol] === clientId);
+      if (row && row[folderCol]) {
+        return row[folderCol]; // Return stored folder ID
+      }
+    }
+  } catch(e) {
+    console.warn('Could not read folder ID from sheet:', e.message);
+  }
+  // Fallback — get or create by name
+  if (fallbackName) {
+    return await getOrCreateClientFolder(parentFolderId, fallbackName);
+  }
+  return parentFolderId; // Last resort — upload to root
+}
+
+async function saveClientFolderIdToRecord(parentFolderId, clientId, folderId) {
+  try {
+    const fileId = await getAdminSheetId(parentFolderId);
+    if (!fileId) return;
+    const dl     = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, { headers: { Authorization: `Bearer ${gdriveToken}` } });
+    const ab     = await dl.arrayBuffer();
+    const wb     = XLSX.read(new Uint8Array(ab), { type: 'array' });
+    repairClientRecordsHeaders(wb);
+    const ws     = wb.Sheets['Client Records'];
+    const rows   = XLSX.utils.sheet_to_json(ws, { header: 1 });
+    const hdrs   = rows[0] || [];
+
+    // Add Drive Folder ID column if missing
+    let folderCol = hdrs.indexOf('Drive Folder ID');
+    if (folderCol === -1) {
+      hdrs.push('Drive Folder ID');
+      folderCol = hdrs.length - 1;
+      rows[0] = hdrs;
+    }
+
+    const idCol = hdrs.indexOf('Client ID');
+    const rowIdx = rows.findIndex((r, i) => i > 0 && r[idCol] === clientId);
+    if (rowIdx > -1) {
+      rows[rowIdx][folderCol] = folderId;
+    }
+
+    const notesCol = hdrs.indexOf('Notes Log');
+    const newWs    = XLSX.utils.aoa_to_sheet(rows);
+    newWs['!cols'] = hdrs.map((h, i) => ({ wch: i === notesCol ? 60 : i < 4 ? 20 : 16 }));
+    newWs['!freeze'] = { xSplit: 0, ySplit: 1 };
+    wb.Sheets['Client Records'] = newWs;
+
+    const out  = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    const blob = new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const form = new FormData();
+    form.append('metadata', new Blob([JSON.stringify({})], { type: 'application/json' }));
+    form.append('file', blob, 'BioBlue_Client_Records.xlsx');
+    await fetch(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=multipart`,
+      { method: 'PATCH', headers: { Authorization: `Bearer ${gdriveToken}` }, body: form });
+  } catch(e) {
+    console.warn('Could not save folder ID to sheet:', e.message);
+  }
+}
+
+// =====================================================================
+// ADMIN SHEET — find or create ADMIN DATA - DO NOT REMOVE folder + Client Records sheet
+// (app-owned under drive.file scope, avoids manual-upload visibility issue)
+// =====================================================================
+let _adminSheetIdCache = null;
+async function getAdminSheetId(rootFolderId) {
+  if (_adminSheetIdCache) return _adminSheetIdCache;
+
+  // 1. Find or create ADMIN DATA - DO NOT REMOVE folder
+  let adminFolderId = null;
+  const afr = await fetch(
+    `https://www.googleapis.com/drive/v3/files?q=name='ADMIN DATA - DO NOT REMOVE' and '${rootFolderId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false&fields=files(id)`,
+    { headers: { Authorization: `Bearer ${gdriveToken}` } }
+  );
+  const afd = await afr.json();
+  if (afd.files && afd.files.length) {
+    adminFolderId = afd.files[0].id;
+  } else {
+    const cr = await fetch('https://www.googleapis.com/drive/v3/files', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${gdriveToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'ADMIN DATA - DO NOT REMOVE', mimeType: 'application/vnd.google-apps.folder', parents: [rootFolderId] })
+    });
+    adminFolderId = (await cr.json()).id;
+  }
+
+  // 2. Find the sheet inside ADMIN DATA - DO NOT REMOVE
+  const sr = await fetch(
+    `https://www.googleapis.com/drive/v3/files?q=name='BioBlue_Client_Records.xlsx' and '${adminFolderId}' in parents and trashed=false&fields=files(id)`,
+    { headers: { Authorization: `Bearer ${gdriveToken}` } }
+  );
+  const sd = await sr.json();
+  if (sd.files && sd.files.length) {
+    _adminSheetIdCache = sd.files[0].id;
+    return _adminSheetIdCache;
+  }
+
+  // 3. Not found — create a fresh workbook with correct columns
+  const headers = [
+    'Client ID','Billing Entity','Site Name','Site Location Name','Descriptor','Trackpod Name',
+    'Street Address','Suburb','State','Postcode',
+    'Business Contact Name','Business Contact Role','Business Contact Email','Business Contact Phone',
+    'KDM Name','KDM Role','KDM Email','KDM Phone',
+    'Logistics Name','Logistics Role','Logistics Email','Logistics Phone',
+    'Admin Contact Name','Admin Contact Role','Admin Contact Email','Admin Contact Phone',
+    'Other Contact Label','Other Contact Name','Other Contact Role','Other Contact Email','Other Contact Phone',
+    'POD Email','POD Email 2','POD Email 3',
+    'Contact Name','Contact Title','Contact Mobile','Contact Email',
+    'Product Interest','Current Supplier','Estimated Volume','Estimated Current Price','Active Products',
+    'Is Distributor / Reseller','Additional Invoicing Emails','PO Required','PO Delivery Email',
+    'BDM Email','Max Vehicle Size','Latest Note',
+    'Prospect \u2713','Quote Sent \u2713','Site Admin \u2713','Site Audit \u2713','Pkg Assessment \u2713','Customer \u2713',
+    'Prospect Doc #','Admin Doc #','Audit Doc #','Packaged Doc #','Quote Doc #','Record Status',
+    'Drive Folder ID','Created Date','Created By','Notes Log'
+  ];
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet([headers]);
+  ws['!cols'] = headers.map((h,i) => ({ wch: h==='Notes Log'?60 : i<4?22:14 }));
+  ws['!freeze'] = { xSplit:0, ySplit:1 };
+  XLSX.utils.book_append_sheet(wb, ws, 'Client Records');
+  // Notes Log tab
+  const nws = XLSX.utils.aoa_to_sheet([['Client ID','Billing Entity','Site Name','Timestamp','Form','BDM','Notes']]);
+  XLSX.utils.book_append_sheet(wb, nws, 'Notes Log');
+
+  const out  = XLSX.write(wb, { bookType:'xlsx', type:'array' });
+  const blob = new Blob([out], { type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const form = new FormData();
+  form.append('metadata', new Blob([JSON.stringify({ name:'BioBlue_Client_Records.xlsx', parents:[adminFolderId] })], { type:'application/json' }));
+  form.append('file', blob, 'BioBlue_Client_Records.xlsx');
+  const up = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id',
+    { method:'POST', headers:{ Authorization:`Bearer ${gdriveToken}` }, body:form });
+  _adminSheetIdCache = (await up.json()).id;
+  return _adminSheetIdCache;
+}
+
+// Pre-fill retry — shown if Drive token unavailable on form load
+function showPrefillRetry(clientId) {
+  const banner = document.getElementById('clientBanner');
+  if (!banner) return;
+  const _nm = document.getElementById('bannerClientName');
+  if (_nm) _nm.textContent = 'Tap below to load full details';
+  let btn = document.getElementById('prefillRetryBtn');
+  if (!btn) {
+    btn = document.createElement('button');
+    btn.id = 'prefillRetryBtn';
+    btn.textContent = '\u21bb Tap to load client details';
+    btn.style.cssText = 'margin-top:8px;padding:8px 14px;border:none;border-radius:8px;background:#1A9FD4;color:#fff;font-weight:700;font-size:12px;cursor:pointer;font-family:inherit;';
+    btn.onclick = () => { btn.textContent = '\u23f3 Loading...'; fetchClientDetails(clientId); };
+    banner.appendChild(btn);
+  } else {
+    btn.style.display = 'inline-block';
+    btn.textContent = '\u21bb Tap to load client details';
+  }
+}
+
+// =====================================================================
+// FORM SNAPSHOT — save/restore full form state from Drive JSON
+// =====================================================================
+const SNAPSHOT_FORM_TYPE = 'Prospect';
+let _snapshotFileId = null;
+
+async function saveFormSnapshot(d, clientFolderId) {
+  if (!gdriveToken || !clientFolderId) return;
+  const clientId = new URLSearchParams(window.location.search).get('client');
+  if (!clientId) return;
+  const fileName = `BB_${SNAPSHOT_FORM_TYPE}_${clientId}.json`;
+  const snapshot = { ...d, _snapshotSavedAt: new Date().toISOString(), _clientId: clientId };
+  const blob = new Blob([JSON.stringify(snapshot, null, 2)], { type: 'application/json' });
+  const sr = await fetch(
+    `https://www.googleapis.com/drive/v3/files?q=name='${fileName}' and '${clientFolderId}' in parents and trashed=false&fields=files(id)`,
+    { headers: { Authorization: `Bearer ${gdriveToken}` } }
+  );
+  if (!sr.ok) throw new Error(`Snapshot lookup failed (${sr.status})`);
+  const sd = await sr.json();
+  const fm = new FormData();
+  if (sd.files && sd.files.length) {
+    fm.append('metadata', new Blob([JSON.stringify({})], { type: 'application/json' }));
+    fm.append('file', blob, fileName);
+    const pr = await fetch(`https://www.googleapis.com/upload/drive/v3/files/${sd.files[0].id}?uploadType=multipart`,
+      { method: 'PATCH', headers: { Authorization: `Bearer ${gdriveToken}` }, body: fm });
+    if (!pr.ok) throw new Error(`Snapshot update failed (${pr.status})`);
+  } else {
+    fm.append('metadata', new Blob([JSON.stringify({ name: fileName, parents: [clientFolderId] })], { type: 'application/json' }));
+    fm.append('file', blob, fileName);
+    const cr = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',
+      { method: 'POST', headers: { Authorization: `Bearer ${gdriveToken}` }, body: fm });
+    if (!cr.ok) throw new Error(`Snapshot creation failed (${cr.status})`);
+  }
+  console.log('✅ Prospect snapshot saved:', fileName);
+}
+
+async function checkForSnapshot(rootFolderId, clientId) {
+  const fileName = `BB_${SNAPSHOT_FORM_TYPE}_${clientId}.json`;
+  try {
+    const clientFolderId = await getClientFolderFromRecord(rootFolderId, clientId, '');
+    if (!clientFolderId) return;
+    const sr = await fetch(
+      `https://www.googleapis.com/drive/v3/files?q=name='${fileName}' and '${clientFolderId}' in parents and trashed=false&fields=files(id,modifiedTime)`,
+      { headers: { Authorization: `Bearer ${gdriveToken}` } }
+    );
+    const sd = await sr.json();
+    if (!sd.files || !sd.files.length) return;
+    _snapshotFileId = sd.files[0].id;
+    const modTime = new Date(sd.files[0].modifiedTime).toLocaleString('en-AU');
+    const banner = document.getElementById('snapshotBanner');
+    if (banner) {
+      const el = banner.querySelector('[data-snap-date]');
+      if (el) el.textContent = modTime;
+      banner.style.display = 'flex';
+    }
+  } catch(e) { console.warn('Snapshot check failed:', e.message); }
+}
+
+async function restoreSnapshot() {
+  if (!_snapshotFileId) { showToast('⚠️ No snapshot to restore'); return; }
+  showToast('⏳ Restoring previous submission...');
+  try {
+    const res = await fetch(`https://www.googleapis.com/drive/v3/files/${_snapshotFileId}?alt=media`,
+      { headers: { Authorization: `Bearer ${gdriveToken}` } });
+    if (!res.ok) throw new Error('Download failed');
+    const d = await res.json();
+    populateFromSnapshot(d);
+    const banner = document.getElementById('snapshotBanner');
+    if (banner) {
+      banner.style.background = 'rgba(0,135,90,0.1)';
+      banner.style.borderColor = 'rgba(0,135,90,0.4)';
+      banner.innerHTML = '<div style="font-size:13px;font-weight:700;color:#00875a;padding:4px 0;">✅ Previous submission restored — make your changes and resubmit</div>';
+    }
+    showToast('✅ Form restored — ready to edit');
+  } catch(e) { showToast('⚠️ Restore failed: ' + e.message); }
+}
+
+function populateFromSnapshot(d) {
+  const sv = (id, val) => { const el = document.getElementById(id); if (el && val !== undefined && val !== null) el.value = val; };
+  // Client details
+  sv('billingEntity',    d.billingEntity);
+  sv('siteLocationName', d.siteLocationName);
+  const descEl = document.getElementById('descriptor');
+  if (descEl && d.descriptor) descEl.value = d.descriptor;
+  const stateEl = document.getElementById('state');
+  if (stateEl && d.state) stateEl.value = d.state;
+  sv('suburb',      d.suburb);
+  sv('siteAddress', d.siteAddress);
+  sv('postcode',    d.postcode);
+  // Contact 1 — Site Contact (fall back to legacy columns)
+  sv('c1Name',  d.c1?.name  || d['Business Contact Name']  || d.contactName);
+  sv('c1Role',  d.c1?.role  || d['Business Contact Role']  || d.contactRole);
+  sv('c1Email', d.c1?.email || d['Business Contact Email'] || d.contactEmail);
+  sv('c1Phone', d.c1?.phone || d['Business Contact Phone'] || d.contactMobile);
+  // Contact 2 — Key Decision Maker
+  sv('c2Name',  d.c2?.name  || d['KDM Name']);
+  sv('c2Role',  d.c2?.role  || d['KDM Role']);
+  sv('c2Email', d.c2?.email || d['KDM Email']);
+  sv('c2Phone', d.c2?.phone || d['KDM Phone']);
+  // Contact 3 — Logistics
+  sv('c3Name',  d.c3?.name  || d['Logistics Name']);
+  sv('c3Role',  d.c3?.role  || d['Logistics Role']);
+  sv('c3Email', d.c3?.email || d['Logistics Email']);
+  sv('c3Phone', d.c3?.phone || d['Logistics Phone']);
+  // Contact 4 — Admin / Invoicing
+  sv('c4Name',  d.c4?.name  || d['Admin Contact Name']);
+  sv('c4Role',  d.c4?.role  || d['Admin Contact Role']);
+  sv('c4Email', d.c4?.email || d['Admin Contact Email']);
+  sv('c4Phone', d.c4?.phone || d['Admin Contact Phone']);
+  // Contact 5 — Other
+  sv('c5Label', d.c5?.label || d['Other Contact Label']);
+  sv('c5Name',  d.c5?.name  || d['Other Contact Name']);
+  sv('c5Role',  d.c5?.role  || d['Other Contact Role']);
+  sv('c5Email', d.c5?.email || d['Other Contact Email']);
+  sv('c5Phone', d.c5?.phone || d['Other Contact Phone']);
+  // Opportunity
+  if (d.productInterest) setInterest(d.productInterest);
+  sv('currentSupplier', d.currentSupplier);
+  sv('estVolume',       d.estVolume);
+  // Conversation
+  sv('convNotes',      d.convNotes);
+  sv('followupDate',   d.followupDate);
+  sv('followupAction', d.followupAction);
+  // Regenerate site name from restored fields
+  if (typeof generateSiteName === 'function') generateSiteName();
+  updateProgress();
+}
+</script>
+</body>
+</html>
