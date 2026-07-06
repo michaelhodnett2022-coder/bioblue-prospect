@@ -225,6 +225,7 @@
             <option>Derek Page</option>
             <option>Angelo Sayas</option>
             <option>Kevin Goverd</option>
+            <option>Brad Ryan</option>
           </select>
         </div>
       </div>
@@ -670,6 +671,7 @@
             <option>Derek Page</option>
             <option>Angelo Sayas</option>
             <option>Kevin Goverd</option>
+            <option>Brad Ryan</option>
           </select>
         </div>
         <div class="field-group">
@@ -722,6 +724,7 @@ const BDM_MAP = {
   'Derek Page':      { email:'derek.page@bioblue.com.au' },
   'Angelo Sayas':    { email:'angelo.sayas@bioblue.com.au' },
   'Kevin Goverd':    { email:'kevin.goverd@bioblue.com.au' },
+  'Brad Ryan':       { email:'brad@bioblue.com.au' },
 };
 
 // =====================================================================
@@ -1168,11 +1171,22 @@ function generateVCard(contact, label, d) {
   ].filter(Boolean).join('\r\n');
   var blob = new Blob([lines], { type: 'text/vcard;charset=utf-8' });
   var url  = URL.createObjectURL(blob);
-  var a    = document.createElement('a');
-  a.href   = url;
-  a.download = vcfName.replace(/\s+/g, '_') + '.vcf';
-  document.body.appendChild(a); a.click(); document.body.removeChild(a);
-  setTimeout(function(){ URL.revokeObjectURL(url); }, 10000);
+  // iOS Safari doesn't handle a forced `download` attribute well for vCards —
+  // it saves the file into the Files app instead of offering to add the
+  // contact. Navigating directly to the blob URL lets iOS's native vCard
+  // handling take over and prompt to add to Contacts, which is what every
+  // other browser already does correctly via the anchor+download approach.
+  var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+  if (isIOS) {
+    window.location.href = url;
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 10000);
+  } else {
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = vcfName.replace(/\s+/g, '_') + '.vcf';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 10000);
+  }
 }
 
 // Builds the "Save to Phone" button list shown in the success modal —
@@ -2063,27 +2077,39 @@ function redirectToFieldTools(clientId) {
 // =====================================================================
 // GET OR CREATE CLIENT FOLDER IN DRIVE
 // =====================================================================
+const _folderIdCache = {};
 async function getOrCreateClientFolder(parentFolderId, folderName) {
-  // Search for existing folder with this name
-  const searchRes = await fetch(
-    `https://www.googleapis.com/drive/v3/files?q=name='${folderName.replace(/'/g,"\\'")}' and '${parentFolderId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false&fields=files(id,name)`,
-    { headers: { Authorization: `Bearer ${gdriveToken}` } }
-  );
-  if (!searchRes.ok) throw new Error(`Folder search failed (${searchRes.status}) — Drive session may have expired, try reloading`);
-  const searchData = await searchRes.json();
-  if (searchData.files && searchData.files.length > 0) {
-    return searchData.files[0].id;
+  const cacheKey = parentFolderId + '::' + folderName;
+  if (_folderIdCache[cacheKey]) return _folderIdCache[cacheKey];
+  // Cache the in-flight promise itself (not just the eventual result) so that
+  // concurrent calls for the same folder share one lookup/create instead of
+  // each independently finding "nothing exists yet" and creating a duplicate.
+  _folderIdCache[cacheKey] = (async () => {
+    const searchRes = await fetch(
+      `https://www.googleapis.com/drive/v3/files?q=name='${folderName.replace(/'/g,"\\'")}' and '${parentFolderId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false&fields=files(id,name)`,
+      { headers: { Authorization: `Bearer ${gdriveToken}` } }
+    );
+    if (!searchRes.ok) throw new Error(`Folder search failed (${searchRes.status}) — Drive session may have expired, try reloading`);
+    const searchData = await searchRes.json();
+    if (searchData.files && searchData.files.length > 0) {
+      return searchData.files[0].id;
+    }
+    const createRes = await fetch('https://www.googleapis.com/drive/v3/files', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${gdriveToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: folderName, mimeType: 'application/vnd.google-apps.folder', parents: [parentFolderId] })
+    });
+    if (!createRes.ok) throw new Error(`Folder creation failed (${createRes.status}) — Drive session may have expired, try reloading`);
+    const created = await createRes.json();
+    if (!created.id) throw new Error('Folder creation returned no ID');
+    return created.id;
+  })();
+  try {
+    return await _folderIdCache[cacheKey];
+  } catch (e) {
+    delete _folderIdCache[cacheKey];
+    throw e;
   }
-  // Create new folder
-  const createRes = await fetch('https://www.googleapis.com/drive/v3/files', {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${gdriveToken}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name: folderName, mimeType: 'application/vnd.google-apps.folder', parents: [parentFolderId] })
-  });
-  if (!createRes.ok) throw new Error(`Folder creation failed (${createRes.status}) — Drive session may have expired, try reloading`);
-  const created = await createRes.json();
-  if (!created.id) throw new Error('Folder creation returned no ID');
-  return created.id;
 }
 
 async function getClientFolderFromRecord(parentFolderId, clientId, fallbackName) {
@@ -2267,15 +2293,26 @@ function showPrefillRetry(clientId) {
 const SNAPSHOT_FORM_TYPE = 'Prospect';
 let _snapshotFileId = null;
 
+// Consolidates the snapshot JSON under one "Data" parent for tidiness,
+// matching Admin/Audit/Packaged/Quote Builder (Fresh Clients Only — existing
+// clients keep using their current flat structure, since getOrCreateClientFolder
+// will simply keep finding their existing subfolder at the old location;
+// only brand-new subfolders go under Data/).
+async function getProspectJsonFolder(clientFolderId) {
+  const dataFolderId = await getOrCreateClientFolder(clientFolderId, 'Data');
+  return await getOrCreateClientFolder(dataFolderId, 'Prospect Data');
+}
+
 async function saveFormSnapshot(d, clientFolderId) {
   if (!gdriveToken || !clientFolderId) return;
   const clientId = new URLSearchParams(window.location.search).get('client');
   if (!clientId) return;
+  const jsonFolderId = await getProspectJsonFolder(clientFolderId);
   const fileName = `BB_${SNAPSHOT_FORM_TYPE}_${clientId}.json`;
   const snapshot = { ...d, _snapshotSavedAt: new Date().toISOString(), _clientId: clientId };
   const blob = new Blob([JSON.stringify(snapshot, null, 2)], { type: 'application/json' });
   const sr = await fetch(
-    `https://www.googleapis.com/drive/v3/files?q=name='${fileName}' and '${clientFolderId}' in parents and trashed=false&fields=files(id)`,
+    `https://www.googleapis.com/drive/v3/files?q=name='${fileName}' and '${jsonFolderId}' in parents and trashed=false&fields=files(id)`,
     { headers: { Authorization: `Bearer ${gdriveToken}` } }
   );
   if (!sr.ok) throw new Error(`Snapshot lookup failed (${sr.status})`);
@@ -2288,7 +2325,7 @@ async function saveFormSnapshot(d, clientFolderId) {
       { method: 'PATCH', headers: { Authorization: `Bearer ${gdriveToken}` }, body: fm });
     if (!pr.ok) throw new Error(`Snapshot update failed (${pr.status})`);
   } else {
-    fm.append('metadata', new Blob([JSON.stringify({ name: fileName, parents: [clientFolderId] })], { type: 'application/json' }));
+    fm.append('metadata', new Blob([JSON.stringify({ name: fileName, parents: [jsonFolderId] })], { type: 'application/json' }));
     fm.append('file', blob, fileName);
     const cr = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',
       { method: 'POST', headers: { Authorization: `Bearer ${gdriveToken}` }, body: fm });
@@ -2302,10 +2339,12 @@ async function checkForSnapshot(rootFolderId, clientId) {
   try {
     const clientFolderId = await getClientFolderFromRecord(rootFolderId, clientId, '');
     if (!clientFolderId) return;
+    const jsonFolderId = await getProspectJsonFolder(clientFolderId);
     const sr = await fetch(
-      `https://www.googleapis.com/drive/v3/files?q=name='${fileName}' and '${clientFolderId}' in parents and trashed=false&fields=files(id,modifiedTime)`,
+      `https://www.googleapis.com/drive/v3/files?q=name='${fileName}' and '${jsonFolderId}' in parents and trashed=false&fields=files(id,modifiedTime)`,
       { headers: { Authorization: `Bearer ${gdriveToken}` } }
     );
+    if (!sr.ok) throw new Error(`Snapshot search failed (${sr.status})`);
     const sd = await sr.json();
     if (!sd.files || !sd.files.length) return;
     _snapshotFileId = sd.files[0].id;
