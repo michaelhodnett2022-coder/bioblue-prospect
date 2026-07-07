@@ -212,6 +212,24 @@
     </div>
     <div class="section-body" id="s1">
 
+      <!-- CLONE FROM PARENT ACCOUNT -->
+      <button onclick="openCloneModal()" id="cloneEntryBtn"
+        style="width:100%;padding:12px;margin-bottom:14px;background:white;color:var(--purple-dark);
+          border:2px solid var(--purple-light);border-radius:10px;font-family:'DM Sans',sans-serif;
+          font-size:13px;font-weight:700;cursor:pointer;">
+        📋 Clone From Parent Account Form
+      </button>
+      <div id="clonedFromBanner" style="display:none;align-items:center;gap:10px;background:var(--purple-pale);
+          border:1.5px solid var(--purple-light);border-radius:10px;padding:10px 14px;margin-bottom:14px;">
+        <div style="font-size:16px;">📋</div>
+        <div style="flex:1;font-size:12px;color:var(--purple-dark);">
+          <strong>Cloned from <span id="clonedFromName"></span></strong> — contact details carried over.
+          Site details below still need to be entered for this new location.
+        </div>
+        <button onclick="clearCloneState()" style="background:none;border:none;color:var(--purple-dark);
+          font-size:11px;font-weight:700;cursor:pointer;text-decoration:underline;">Undo</button>
+      </div>
+
       <div class="field-row">
         <div class="field-group">
           <label class="field-label required">Date</label>
@@ -705,6 +723,19 @@
     </div>
   </div>
 </div>
+
+<div class="modal-overlay" id="cloneModal">
+  <div class="modal-box" style="max-width:480px;">
+    <h3>📋 Clone From Parent Account Form</h3>
+    <p style="margin-bottom:10px;">Search for the existing client whose contact details you want to carry over. Site details (address, suburb, state, descriptor) and the Opportunity section will stay blank for you to fill in fresh.</p>
+    <input type="text" id="cloneSearchInput" placeholder="Search by company name..." oninput="searchCloneCandidates(this.value)"
+      style="width:100%;padding:10px 12px;border:1.5px solid var(--gray-light);border-radius:8px;font-size:14px;margin-bottom:10px;">
+    <div id="cloneResults" style="max-height:320px;overflow-y:auto;"></div>
+    <div class="modal-actions" style="margin-top:14px;">
+      <button class="btn-primary" style="background:white;color:var(--gray-mid);border:1.5px solid var(--gray-light);" onclick="closeCloneModal()">Cancel</button>
+    </div>
+  </div>
+</div>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -1014,6 +1045,7 @@ function collectData() {
     bdmName:         g('bdmName'),
     bdmEmail:        g('bdmEmail'),
     formType:        'Prospect',
+    clonedFromClientId: _clonedFromClientId || '',
     _savedAt:        new Date().toISOString(),
   };
 }
@@ -1124,6 +1156,143 @@ async function checkDuplicateSiteName(generatedName) {
     console.warn('Duplicate check failed (allowing submit):', e.message);
     return { isDupe:false }; // fail-open — never block on a check error
   }
+}
+
+// =====================================================================
+// CLONE FROM PARENT ACCOUNT - carries contact details from an existing
+// client onto a brand-new site, without touching the source record and
+// without making this submission behave like an update. Only Billing
+// Entity, the 5 contacts, POD emails, and BDM clone across - every
+// site-specific field (address, suburb, state, descriptor) and the
+// Opportunity section stay blank, ready for fresh entry.
+// =====================================================================
+let _cloneHdrs = [];
+let _cloneFullRows = [];
+let _clonedFromClientId = null;
+
+async function openCloneModal() {
+  document.getElementById('cloneModal').classList.add('active');
+  document.getElementById('cloneSearchInput').value = '';
+  document.getElementById('cloneResults').innerHTML = '<div style="padding:20px;text-align:center;color:var(--gray-mid);font-size:13px;">Loading client list...</div>';
+  await loadCloneCandidates();
+  searchCloneCandidates('');
+}
+function closeCloneModal() {
+  document.getElementById('cloneModal').classList.remove('active');
+}
+
+async function loadCloneCandidates() {
+  if (_cloneFullRows.length) return;
+  try {
+    await getDriveToken();
+    const fr = await fetch(
+      `https://www.googleapis.com/drive/v3/files?q=name='${GDRIVE_FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false&fields=files(id)`,
+      { headers: { Authorization: `Bearer ${gdriveToken}` } }
+    );
+    if (!fr.ok) throw new Error(`Folder search failed (${fr.status})`);
+    const fd = await fr.json();
+    if (!fd.files || !fd.files.length) throw new Error('BioBlue Audits folder not found');
+    const sheetId = await getAdminSheetId(fd.files[0].id);
+    if (!sheetId) throw new Error('Client records not found');
+    const dl = await fetch(`https://www.googleapis.com/drive/v3/files/${sheetId}?alt=media`,
+      { headers: { Authorization: `Bearer ${gdriveToken}` } });
+    if (!dl.ok) throw new Error(`Client records download failed (${dl.status})`);
+    const ab = await dl.arrayBuffer();
+    const wb = XLSX.read(new Uint8Array(ab), { type:'array' });
+    repairClientRecordsHeaders(wb);
+    const ws = wb.Sheets['Client Records'];
+    const rows = XLSX.utils.sheet_to_json(ws, { header:1 });
+    _cloneHdrs = rows[0] || [];
+    _cloneFullRows = rows.slice(1).filter(r => r.length);
+  } catch(e) {
+    document.getElementById('cloneResults').innerHTML = `<div style="padding:20px;text-align:center;color:var(--red);font-size:13px;">Could not load client list: ${e.message}</div>`;
+  }
+}
+
+function searchCloneCandidates(query) {
+  const resultsEl = document.getElementById('cloneResults');
+  if (!_cloneFullRows.length) return;
+  const billingCol = _cloneHdrs.indexOf('Billing Entity');
+  const siteCol     = _cloneHdrs.indexOf('Site Name');
+  const suburbCol   = _cloneHdrs.indexOf('Suburb');
+  const stateCol    = _cloneHdrs.indexOf('State');
+  const idCol       = _cloneHdrs.indexOf('Client ID');
+  const q = query.trim().toLowerCase();
+
+  const matches = _cloneFullRows.filter(r => {
+    const billing = (r[billingCol]||'').toString().toLowerCase();
+    return !q || billing.includes(q);
+  }).slice(0, 20);
+
+  if (!matches.length) {
+    resultsEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--gray-mid);font-size:13px;">No matches - try a different search.</div>';
+    return;
+  }
+
+  resultsEl.innerHTML = matches.map(r => {
+    const billing = (r[billingCol]||'Unknown').toString();
+    const site    = (r[siteCol]||'').toString();
+    const suburb  = (r[suburbCol]||'').toString();
+    const state   = (r[stateCol]||'').toString();
+    const rowId   = (r[idCol]||'').toString();
+    return `<div onclick="selectCloneSource('${rowId}')"
+        style="padding:12px 14px;border:1.5px solid var(--gray-light);border-radius:8px;margin-bottom:8px;cursor:pointer;background:white;"
+        onmouseover="this.style.background='var(--purple-pale)'" onmouseout="this.style.background='white'">
+      <div style="font-weight:700;font-size:13px;color:var(--gray-dark);">${billing}</div>
+      <div style="font-size:11px;color:var(--gray-mid);">${site}${suburb?' - '+suburb:''}${state?', '+state:''}</div>
+    </div>`;
+  }).join('');
+}
+
+function selectCloneSource(clientId) {
+  const idCol = _cloneHdrs.indexOf('Client ID');
+  const row = _cloneFullRows.find(r => (r[idCol]||'').toString() === clientId);
+  if (!row) return;
+  const get = col => { const i = _cloneHdrs.indexOf(col); return (i>-1 && row[i]) ? row[i].toString() : ''; };
+  const set = (id, val) => { const el = document.getElementById(id); if (el && val) el.value = val; };
+
+  set('billingEntity', get('Billing Entity'));
+  set('c1Name', get('Business Contact Name'));  set('c1Role', get('Business Contact Role'));
+  set('c1Email', get('Business Contact Email')); set('c1Phone', get('Business Contact Phone'));
+  set('c2Name', get('KDM Name'));  set('c2Role', get('KDM Role'));
+  set('c2Email', get('KDM Email')); set('c2Phone', get('KDM Phone'));
+  set('c3Name', get('Logistics Name'));  set('c3Role', get('Logistics Role'));
+  set('c3Email', get('Logistics Email')); set('c3Phone', get('Logistics Phone'));
+  set('c4Name', get('Admin Contact Name'));  set('c4Role', get('Admin Contact Role'));
+  set('c4Email', get('Admin Contact Email')); set('c4Phone', get('Admin Contact Phone'));
+  set('c5Label', get('Other Contact Label'));
+  set('c5Name', get('Other Contact Name'));  set('c5Role', get('Other Contact Role'));
+  set('c5Email', get('Other Contact Email')); set('c5Phone', get('Other Contact Phone'));
+  set('podEmail', get('POD Email')); set('podEmail2', get('POD Email 2')); set('podEmail3', get('POD Email 3'));
+  const bdmName = get('Created By');
+  if (bdmName) {
+    const bdmTop = document.getElementById('bdmNameTop');
+    const bdmBottom = document.getElementById('bdmName');
+    if (bdmTop) bdmTop.value = bdmName;
+    if (bdmBottom) bdmBottom.value = bdmName;
+    autoFill(bdmName);
+  }
+
+  _clonedFromClientId = clientId;
+  const banner  = document.getElementById('clonedFromBanner');
+  const nameEl  = document.getElementById('clonedFromName');
+  if (banner && nameEl) { nameEl.textContent = get('Billing Entity') || clientId; banner.style.display = 'flex'; }
+
+  closeCloneModal();
+  updateProgress();
+  showToast("Details cloned - now enter this new site's location details");
+}
+
+function clearCloneState() {
+  _clonedFromClientId = null;
+  const banner = document.getElementById('clonedFromBanner');
+  if (banner) banner.style.display = 'none';
+  ['billingEntity','c1Name','c1Role','c1Email','c1Phone','c2Name','c2Role','c2Email','c2Phone',
+   'c3Name','c3Role','c3Email','c3Phone','c4Name','c4Role','c4Email','c4Phone',
+   'c5Label','c5Name','c5Role','c5Email','c5Phone','podEmail','podEmail2','podEmail3'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  updateProgress();
 }
 
 // =====================================================================
@@ -1392,7 +1561,7 @@ function repairClientRecordsHeaders(wb) {
     'BDM Email','Max Vehicle Size','Latest Note',
     'Prospect \u2713','Quote Sent \u2713','Site Admin \u2713','Site Audit \u2713','Pkg Assessment \u2713','Customer \u2713',
     'Prospect Doc #','Admin Doc #','Audit Doc #','Packaged Doc #','Quote Doc #','Record Status',
-    'Drive Folder ID','Created Date','Created By','Notes Log'
+    'Drive Folder ID','Created Date','Created By','Cloned From Client ID','Notes Log'
   ];
   const rows = XLSX.utils.sheet_to_json(ws, { header:1 });
   if (!rows.length) return;
@@ -1514,6 +1683,7 @@ async function createClientRecord(d, folderId, existingClientId) {
   } else {
     set('Created Date',  new Date().toLocaleDateString('en-AU'));
     set('Created By',    d.bdmName);
+    if (d.clonedFromClientId) set('Cloned From Client ID', d.clonedFromClientId);
     set('Notes Log',     noteEntry);
     rows.push(targetRow);
   }
@@ -1822,6 +1992,9 @@ function clearAll() {
   document.getElementById('bdmName').selectedIndex = 0;
   setInterest('');
   productInterest = '';
+  _clonedFromClientId = null;
+  const cloneBanner = document.getElementById('clonedFromBanner');
+  if (cloneBanner) cloneBanner.style.display = 'none';
   updateProgress();
 }
 function toggleSection(id) { const b=document.getElementById(id),t=document.getElementById('toggle-'+id); if(!b)return; const c=b.classList.toggle('collapsed'); if(t)t.textContent=c?'▶':'▼'; }
@@ -2245,7 +2418,7 @@ async function getAdminSheetId(rootFolderId) {
     'BDM Email','Max Vehicle Size','Latest Note',
     'Prospect \u2713','Quote Sent \u2713','Site Admin \u2713','Site Audit \u2713','Pkg Assessment \u2713','Customer \u2713',
     'Prospect Doc #','Admin Doc #','Audit Doc #','Packaged Doc #','Quote Doc #','Record Status',
-    'Drive Folder ID','Created Date','Created By','Notes Log'
+    'Drive Folder ID','Created Date','Created By','Cloned From Client ID','Notes Log'
   ];
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.aoa_to_sheet([headers]);
