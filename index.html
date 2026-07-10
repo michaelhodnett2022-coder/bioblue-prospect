@@ -212,13 +212,6 @@
     </div>
     <div class="section-body" id="s1">
 
-      <!-- CLONE FROM PARENT ACCOUNT -->
-      <button onclick="openCloneModal()" id="cloneEntryBtn"
-        style="width:100%;padding:12px;margin-bottom:14px;background:white;color:var(--purple-dark);
-          border:2px solid var(--purple-light);border-radius:10px;font-family:'DM Sans',sans-serif;
-          font-size:13px;font-weight:700;cursor:pointer;">
-        📋 Clone From Parent Account Form
-      </button>
       <div id="clonedFromBanner" style="display:none;align-items:center;gap:10px;background:var(--purple-pale);
           border:1.5px solid var(--purple-light);border-radius:10px;padding:10px 14px;margin-bottom:14px;">
         <div style="font-size:16px;">📋</div>
@@ -594,7 +587,7 @@
     <div class="section-body collapsed" id="s3">
 
       <div class="field-group" style="margin-bottom:16px;">
-        <label class="field-label required">Product Interest</label>
+        <label class="field-label">Product Interest</label>
         <div class="pill-group">
           <button class="pill-btn" id="pill-bulk" onclick="setInterest('Bulk')">🚛 Bulk</button>
           <button class="pill-btn" id="pill-packaged" onclick="setInterest('Packaged')">📦 Packaged</button>
@@ -646,7 +639,7 @@
     <div class="section-body collapsed" id="s4">
 
       <div class="field-group" style="margin-bottom:16px;">
-        <label class="field-label required">Conversation Notes</label>
+        <label class="field-label">Conversation Notes</label>
         <textarea id="convNotes" rows="4" placeholder="What was discussed? Key pain points, objections, opportunities..." oninput="updateProgress()"></textarea>
       </div>
 
@@ -724,18 +717,6 @@
   </div>
 </div>
 
-<div class="modal-overlay" id="cloneModal">
-  <div class="modal-box" style="max-width:480px;">
-    <h3>📋 Clone From Parent Account Form</h3>
-    <p style="margin-bottom:10px;">Search for the existing client whose contact details you want to carry over. Site details (address, suburb, state, descriptor) and the Opportunity section will stay blank for you to fill in fresh.</p>
-    <input type="text" id="cloneSearchInput" placeholder="Search by company name..." oninput="searchCloneCandidates(this.value)"
-      style="width:100%;padding:10px 12px;border:1.5px solid var(--gray-light);border-radius:8px;font-size:14px;margin-bottom:10px;">
-    <div id="cloneResults" style="max-height:320px;overflow-y:auto;"></div>
-    <div class="modal-actions" style="margin-top:14px;">
-      <button class="btn-primary" style="background:white;color:var(--gray-mid);border:1.5px solid var(--gray-light);" onclick="closeCloneModal()">Cancel</button>
-    </div>
-  </div>
-</div>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -988,11 +969,10 @@ function autoFill(name) {
 // PROGRESS
 // =====================================================================
 function updateProgress() {
-  const req = ['billingEntity','prospectDate','suburb','state','bdmName'];
+  const req = ['billingEntity','prospectDate','descriptor','suburb','state','bdmName'];
   const filled = req.filter(id => document.getElementById(id)?.value?.trim()).length;
-  const hasInterest = productInterest ? 1 : 0;
-  const total = req.length + 1;
-  const pct = Math.round(((filled + hasInterest) / total) * 100);
+  const total = req.length;
+  const pct = Math.round((filled / total) * 100);
   document.getElementById('progressBar').style.width = pct + '%';
   document.getElementById('progressLabel').textContent = pct + '% complete';
 }
@@ -1170,78 +1150,28 @@ let _cloneHdrs = [];
 let _cloneFullRows = [];
 let _clonedFromClientId = null;
 
-async function openCloneModal() {
-  document.getElementById('cloneModal').classList.add('active');
-  document.getElementById('cloneSearchInput').value = '';
-  document.getElementById('cloneResults').innerHTML = '<div style="padding:20px;text-align:center;color:var(--gray-mid);font-size:13px;">Loading client list...</div>';
-  await loadCloneCandidates();
-  searchCloneCandidates('');
-}
-function closeCloneModal() {
-  document.getElementById('cloneModal').classList.remove('active');
-}
-
 async function loadCloneCandidates() {
   if (_cloneFullRows.length) return;
-  try {
-    await getDriveToken();
-    const fr = await fetch(
-      `https://www.googleapis.com/drive/v3/files?q=name='${GDRIVE_FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false&fields=files(id)`,
-      { headers: { Authorization: `Bearer ${gdriveToken}` } }
-    );
-    if (!fr.ok) throw new Error(`Folder search failed (${fr.status})`);
-    const fd = await fr.json();
-    if (!fd.files || !fd.files.length) throw new Error('BioBlue Audits folder not found');
-    const sheetId = await getAdminSheetId(fd.files[0].id);
-    if (!sheetId) throw new Error('Client records not found');
-    const dl = await fetch(`https://www.googleapis.com/drive/v3/files/${sheetId}?alt=media`,
-      { headers: { Authorization: `Bearer ${gdriveToken}` } });
-    if (!dl.ok) throw new Error(`Client records download failed (${dl.status})`);
-    const ab = await dl.arrayBuffer();
-    const wb = XLSX.read(new Uint8Array(ab), { type:'array' });
-    repairClientRecordsHeaders(wb);
-    const ws = wb.Sheets['Client Records'];
-    const rows = XLSX.utils.sheet_to_json(ws, { header:1 });
-    _cloneHdrs = rows[0] || [];
-    _cloneFullRows = rows.slice(1).filter(r => r.length);
-  } catch(e) {
-    document.getElementById('cloneResults').innerHTML = `<div style="padding:20px;text-align:center;color:var(--red);font-size:13px;">Could not load client list: ${e.message}</div>`;
-  }
-}
-
-function searchCloneCandidates(query) {
-  const resultsEl = document.getElementById('cloneResults');
-  if (!_cloneFullRows.length) return;
-  const billingCol = _cloneHdrs.indexOf('Billing Entity');
-  const siteCol     = _cloneHdrs.indexOf('Site Name');
-  const suburbCol   = _cloneHdrs.indexOf('Suburb');
-  const stateCol    = _cloneHdrs.indexOf('State');
-  const idCol       = _cloneHdrs.indexOf('Client ID');
-  const q = query.trim().toLowerCase();
-
-  const matches = _cloneFullRows.filter(r => {
-    const billing = (r[billingCol]||'').toString().toLowerCase();
-    return !q || billing.includes(q);
-  }).slice(0, 20);
-
-  if (!matches.length) {
-    resultsEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--gray-mid);font-size:13px;">No matches - try a different search.</div>';
-    return;
-  }
-
-  resultsEl.innerHTML = matches.map(r => {
-    const billing = (r[billingCol]||'Unknown').toString();
-    const site    = (r[siteCol]||'').toString();
-    const suburb  = (r[suburbCol]||'').toString();
-    const state   = (r[stateCol]||'').toString();
-    const rowId   = (r[idCol]||'').toString();
-    return `<div onclick="selectCloneSource('${rowId}')"
-        style="padding:12px 14px;border:1.5px solid var(--gray-light);border-radius:8px;margin-bottom:8px;cursor:pointer;background:white;"
-        onmouseover="this.style.background='var(--purple-pale)'" onmouseout="this.style.background='white'">
-      <div style="font-weight:700;font-size:13px;color:var(--gray-dark);">${billing}</div>
-      <div style="font-size:11px;color:var(--gray-mid);">${site}${suburb?' - '+suburb:''}${state?', '+state:''}</div>
-    </div>`;
-  }).join('');
+  await getDriveToken();
+  const fr = await fetch(
+    `https://www.googleapis.com/drive/v3/files?q=name='${GDRIVE_FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false&fields=files(id)`,
+    { headers: { Authorization: `Bearer ${gdriveToken}` } }
+  );
+  if (!fr.ok) throw new Error(`Folder search failed (${fr.status})`);
+  const fd = await fr.json();
+  if (!fd.files || !fd.files.length) throw new Error('BioBlue Audits folder not found');
+  const sheetId = await getAdminSheetId(fd.files[0].id);
+  if (!sheetId) throw new Error('Client records not found');
+  const dl = await fetch(`https://www.googleapis.com/drive/v3/files/${sheetId}?alt=media`,
+    { headers: { Authorization: `Bearer ${gdriveToken}` } });
+  if (!dl.ok) throw new Error(`Client records download failed (${dl.status})`);
+  const ab = await dl.arrayBuffer();
+  const wb = XLSX.read(new Uint8Array(ab), { type:'array' });
+  repairClientRecordsHeaders(wb);
+  const ws = wb.Sheets['Client Records'];
+  const rows = XLSX.utils.sheet_to_json(ws, { header:1 });
+  _cloneHdrs = rows[0] || [];
+  _cloneFullRows = rows.slice(1).filter(r => r.length);
 }
 
 function selectCloneSource(clientId) {
@@ -1278,7 +1208,6 @@ function selectCloneSource(clientId) {
   const nameEl  = document.getElementById('clonedFromName');
   if (banner && nameEl) { nameEl.textContent = get('Billing Entity') || clientId; banner.style.display = 'flex'; }
 
-  closeCloneModal();
   updateProgress();
   showToast("Details cloned - now enter this new site's location details");
 }
@@ -1836,6 +1765,7 @@ async function uploadAndSend() {
   }
 
   if (!d.billingEntity || !d.billingEntity.trim()) { showToast('⚠️ Customer Billing Entity required'); return; }
+  if (!d.descriptor) { showToast('⚠️ Descriptor required'); return; }
   if (!d.suburb || !d.suburb.trim()) { showToast('⚠️ Suburb required'); return; }
   if (!d.state) { showToast('⚠️ State required'); return; }
   if (!d.prospectDate) { showToast('⚠️ Date required'); return; }
@@ -2008,7 +1938,6 @@ function showToast(msg) { const t=document.getElementById('toast'); t.textConten
 // INIT
 document.addEventListener('DOMContentLoaded', () => {
   try { if(typeof emailjs!=='undefined') emailjs.init(EMAILJS_PUBLIC_KEY); } catch(e) {}
-  document.getElementById('prospectDate').value
   loadClientFromURL();
   document.getElementById('prospectDate').value = new Date().toISOString().split('T')[0];
   document.getElementById('bdmName').value = 'Michael Hodnett';
@@ -2048,8 +1977,30 @@ document.addEventListener('DOMContentLoaded', () => {
 async function loadClientFromURL() {
   const params   = new URLSearchParams(window.location.search);
   const clientId = params.get('client');
+  const cloneId  = params.get('clone');
   const banner   = document.getElementById('clientBanner');
   const noBanner = document.getElementById('noClientBanner');
+
+  // ── CLONE — arrived from Field Tools hub's "Clone Existing Client" button.
+  // Never treat this as loading/editing cloneId — it's only a template source.
+  if (cloneId) {
+    if (banner) {
+      banner.style.display = 'flex';
+      document.getElementById('bannerClientId').textContent = 'Cloning from: ' + cloneId;
+      try {
+        const _sessName = sessionStorage.getItem('bb_selected_client_name');
+        const _urlName  = params.get('name');
+        const _nm = document.getElementById('bannerClientName');
+        if (_nm) _nm.textContent = (_urlName || _sessName) ? 'Tap below to clone ' + (_urlName || _sessName) : 'Tap below to load cloned details';
+      } catch(e) {}
+    }
+    if (gdriveToken) {
+      applyCloneFromURL(cloneId);
+    } else {
+      showCloneRetry(cloneId);
+    }
+    return;
+  }
 
   if (!clientId) {
     if (noBanner) noBanner.style.display = 'flex';
@@ -2457,6 +2408,38 @@ function showPrefillRetry(clientId) {
   } else {
     btn.style.display = 'inline-block';
     btn.textContent = '\u21bb Tap to load client details';
+  }
+}
+
+// Same tap-to-load pattern as showPrefillRetry, but for the clone case —
+// runs the existing, already-working clone logic (loadCloneCandidates +
+// selectCloneSource) once tapped, rather than fetchClientDetails.
+async function applyCloneFromURL(cloneId) {
+  try {
+    await loadCloneCandidates();
+    selectCloneSource(cloneId);
+    const rb = document.getElementById('cloneRetryBtn');
+    if (rb) rb.style.display = 'none';
+  } catch(e) {
+    showToast('⚠️ Could not load clone source — tap to retry');
+    showCloneRetry(cloneId);
+  }
+}
+
+function showCloneRetry(cloneId) {
+  const banner = document.getElementById('clientBanner');
+  if (!banner) return;
+  let btn = document.getElementById('cloneRetryBtn');
+  if (!btn) {
+    btn = document.createElement('button');
+    btn.id = 'cloneRetryBtn';
+    btn.textContent = '\u21bb Tap to load cloned details';
+    btn.style.cssText = 'margin-top:8px;padding:8px 14px;border:none;border-radius:8px;background:#7c3aed;color:#fff;font-weight:700;font-size:12px;cursor:pointer;font-family:inherit;';
+    btn.onclick = () => { btn.textContent = '\u23f3 Cloning...'; applyCloneFromURL(cloneId); };
+    banner.appendChild(btn);
+  } else {
+    btn.style.display = 'inline-block';
+    btn.textContent = '\u21bb Tap to load cloned details';
   }
 }
 
