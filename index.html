@@ -710,7 +710,7 @@
     <div class="modal-actions">
       <button class="btn-primary" onclick="closeModal()">Close</button>
       <button class="btn-primary" id="modalFieldToolsBtn" style="display:none;background:var(--purple-dark);"
-        onclick="window.location.href='https://michaelhodnett2022-coder.github.io/bioblue-field-tools'">
+        onclick="redirectToFieldTools(window._modalReturningClientId)">
         ← Field Tools
       </button>
     </div>
@@ -1860,8 +1860,17 @@ async function uploadAndSend() {
     // browsers can silently block since it wasn't a direct user gesture
     buildContactSaveButtons(d);
 
+    // Store the client ID and reveal the manual "Field Tools" button rather
+    // than auto-redirecting on a fixed timer — a BDM saving multiple contacts
+    // to their phone needs a separate tap per contact (especially on iOS,
+    // where each one hands off to the native Add Contact sheet and back),
+    // and a 2.5s timer was cutting that off after the first contact at most.
+    // The BDM now leaves whenever they're actually done, not on a guess.
+    window._modalReturningClientId = newId || '';
+    const fieldToolsBtn = document.getElementById('modalFieldToolsBtn');
+    if (fieldToolsBtn) fieldToolsBtn.style.display = 'inline-flex';
+
     document.getElementById('modalMsg').textContent = `✅ Prospect ${isUpdate?'updated':'submitted'}!\n\n🆔 Document Ref: ${d.docRef}\n☁️ PDF ${existingFileId?'updated':'uploaded'} to Google Drive\n📊 Client record ${isUpdate?'updated':'created'} — Prospect ✓${d.followupDate ? '\n📅 Calendar invite sent to '+d.bdmEmail : ''}${_followUpWarning}`;
-    redirectToFieldTools(newId||'');
     document.getElementById('modal').classList.add('active');
 
   } catch(e) {
@@ -2192,10 +2201,14 @@ async function fetchClientDetails(clientId) {
 // =====================================================================
 // AUTO-REDIRECT TO FIELD TOOLS AFTER SUBMISSION
 // =====================================================================
+// Navigates to the Field Tools hub, restoring this client as the active
+// selection there via ?returning=. Only ever called from the BDM's own tap
+// on the modal's "Field Tools" button — previously fired automatically on
+// a fixed 2.5s timer, which cut off the multi-contact "Save to Phone" flow
+// before a BDM could tap through more than one contact.
 function redirectToFieldTools(clientId) {
   const base = 'https://michaelhodnett2022-coder.github.io/bioblue-field-tools';
-  const url  = clientId ? base + '?returning=' + clientId : base;
-  setTimeout(() => { window.location.href = url; }, 2500);
+  window.location.href = clientId ? base + '?returning=' + clientId : base;
 }
 
 // =====================================================================
