@@ -1990,6 +1990,24 @@ async function loadClientFromURL() {
   const banner   = document.getElementById('clientBanner');
   const noBanner = document.getElementById('noClientBanner');
 
+  // ── PROMOTE — arrived from the Prospect Tracker's "Promote to client"
+  // button. Unlike Clone, there is no existing Client ID/sheet row to read —
+  // the tracker passes the lead's own fields straight in the URL, so this
+  // just fills the form directly with no Drive lookup. Never sets clientId
+  // or clone state, so the rest of this function's logic is untouched.
+  if (params.get('promote') === '1') {
+    const set = (id, val) => { const el = document.getElementById(id); if (el && val) el.value = val; };
+    set('billingEntity', params.get('company'));
+    set('state', params.get('state'));
+    set('c1Name', params.get('contactName'));
+    set('c1Phone', params.get('contactPhone'));
+    set('c1Email', params.get('contactEmail'));
+    generateSiteName(); generateTrackpodName(); updateProgress();
+    showToast('Details carried over from Prospect Tracker — complete the rest below');
+    if (noBanner) noBanner.style.display = 'flex';
+    return;
+  }
+
   // ── CLONE — arrived from Field Tools hub's "Clone Existing Client" button.
   // Never treat this as loading/editing cloneId — it's only a template source.
   if (cloneId) {
@@ -2599,3 +2617,4 @@ function populateFromSnapshot(d) {
 </script>
 </body>
 </html>
+
