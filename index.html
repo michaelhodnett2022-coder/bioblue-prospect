@@ -122,6 +122,50 @@
 </head>
 <body>
 
+<!-- =====================================================================
+     BULK ONBOARD PANEL — only shown with ?bulk=1 in the URL. Invisible
+     and inert for every normal BDM opening this form as usual. Runs the
+     exact same uploadAndSend() a manual submission uses, one row at a
+     time, so there is no separate/duplicated submission logic to drift
+     out of sync with the real form.
+     ===================================================================== -->
+<div id="bulkPanel" style="display:none;background:var(--purple-pale);border-bottom:3px solid var(--purple);padding:16px;font-family:'DM Sans',sans-serif;">
+  <div style="max-width:1100px;margin:0 auto;">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+      <div style="background:var(--purple);color:white;font-weight:700;font-size:12px;letter-spacing:0.5px;border-radius:6px;padding:4px 10px;">BULK ONBOARD</div>
+      <div style="font-size:13px;color:var(--gray-mid);">Loads a site sheet, validates each row, then submits selected rows through this form's normal submission flow.</div>
+    </div>
+    <input type="file" id="bulkFileInput" accept=".xlsx" onchange="handleBulkFile(event)" style="margin-bottom:10px;">
+    <div id="bulkSummary" style="font-size:13px;color:var(--gray-dark);margin-bottom:8px;"></div>
+    <div id="bulkReviewWrap" style="display:none;">
+      <div style="margin-bottom:8px;">
+        <button onclick="bulkSelectAllValid(true)" class="btn" style="background:white;border:1px solid var(--purple);color:var(--purple);border-radius:6px;padding:6px 12px;font-size:12px;cursor:pointer;">Select all valid</button>
+        <button onclick="bulkSelectAllValid(false)" class="btn" style="background:white;border:1px solid var(--gray-light);color:var(--gray-mid);border-radius:6px;padding:6px 12px;font-size:12px;cursor:pointer;">Clear selection</button>
+        <button id="bulkRunBtn" onclick="runBulkSelected()" style="background:var(--purple);color:white;border:none;border-radius:6px;padding:6px 16px;font-size:12px;font-weight:600;cursor:pointer;">▶ Run Selected</button>
+      </div>
+      <div id="bulkProgress" style="font-size:12px;color:var(--purple-dark);margin-bottom:8px;font-weight:600;"></div>
+      <div style="max-height:360px;overflow:auto;border:1px solid var(--gray-light);border-radius:8px;background:white;">
+        <table style="width:100%;border-collapse:collapse;font-size:12px;">
+          <thead style="position:sticky;top:0;background:var(--purple-light);">
+            <tr>
+              <th style="padding:6px;text-align:left;">Run</th>
+              <th style="padding:6px;text-align:left;">Sheet Row</th>
+              <th style="padding:6px;text-align:left;">Billing Entity</th>
+              <th style="padding:6px;text-align:left;">Site</th>
+              <th style="padding:6px;text-align:left;">Suburb, State</th>
+              <th style="padding:6px;text-align:left;">BDM</th>
+              <th style="padding:6px;text-align:left;">Contact</th>
+              <th style="padding:6px;text-align:left;">Status</th>
+              <th style="padding:6px;text-align:left;">Result</th>
+            </tr>
+          </thead>
+          <tbody id="bulkReviewBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="app-header">
   <div class="header-top">
     <div style="display:flex;align-items:center;gap:10px;">
@@ -1741,13 +1785,13 @@ async function appendConversationNote(d) {
 
 async function uploadAndSend() {
   const d = collectData();
-  if (!d.bdmName) { showToast('⚠️ Please select your name'); return; }
+  if (!d.bdmName) { showToast('⚠️ Please select your name'); return { success:false, error:'No BDM selected' }; }
 
   if (window._siteNameTooLong) {
     showToast('⚠️ Generated Site Name is over 50 characters — shorten Billing Entity or Site Tag Name before submitting');
     const out = document.getElementById('generatedSiteName');
     if (out) out.scrollIntoView({ behavior:'smooth', block:'center' });
-    return;
+    return { success:false, error:'Generated Site Name over 50 characters' };
   }
 
   // ── UPDATE MODE — append conversation note, no PDF ──
@@ -1758,17 +1802,17 @@ async function uploadAndSend() {
       // Scroll to the conversation section
       const convEl = document.getElementById('convNotes');
       if (convEl) { const s = document.getElementById('s4'); if(s && s.classList.contains('collapsed')) toggleSection('s4'); setTimeout(() => convEl.scrollIntoView({ behavior:'smooth', block:'center' }), 200); }
-      return;
+      return { success:false, error:'Conversation notes required (update mode)' };
     }
     await appendConversationNote(d);
-    return;
+    return { success:true, isUpdate:true };
   }
 
-  if (!d.billingEntity || !d.billingEntity.trim()) { showToast('⚠️ Customer Billing Entity required'); return; }
-  if (!d.descriptor) { showToast('⚠️ Descriptor required'); return; }
-  if (!d.suburb || !d.suburb.trim()) { showToast('⚠️ Suburb required'); return; }
-  if (!d.state) { showToast('⚠️ State required'); return; }
-  if (!d.prospectDate) { showToast('⚠️ Date required'); return; }
+  if (!d.billingEntity || !d.billingEntity.trim()) { showToast('⚠️ Customer Billing Entity required'); return { success:false, error:'Billing Entity required' }; }
+  if (!d.descriptor) { showToast('⚠️ Descriptor required'); return { success:false, error:'Descriptor required' }; }
+  if (!d.suburb || !d.suburb.trim()) { showToast('⚠️ Suburb required'); return { success:false, error:'Suburb required' }; }
+  if (!d.state) { showToast('⚠️ State required'); return { success:false, error:'State required' }; }
+  if (!d.prospectDate) { showToast('⚠️ Date required'); return { success:false, error:'Date required' }; }
 
   const existingClientId = new URLSearchParams(window.location.search).get('client');
 
@@ -1787,7 +1831,7 @@ async function uploadAndSend() {
         document.getElementById('modalFieldToolsBtn').style.display = 'inline-block';
         document.getElementById('modal').classList.add('active');
         showToast('🚫 Duplicate blocked — load the existing client instead');
-        return;
+        return { success:false, error:'Duplicate site name — already exists ('+dupe.existingName+')', duplicate:true };
       }
     } catch(e) {
       console.warn('Duplicate pre-check skipped:', e.message);
@@ -1873,12 +1917,15 @@ async function uploadAndSend() {
     document.getElementById('modalMsg').textContent = `✅ Prospect ${isUpdate?'updated':'submitted'}!\n\n🆔 Document Ref: ${d.docRef}\n☁️ PDF ${existingFileId?'updated':'uploaded'} to Google Drive\n📊 Client record ${isUpdate?'updated':'created'} — Prospect ✓${d.followupDate ? '\n📅 Calendar invite sent to '+d.bdmEmail : ''}${_followUpWarning}`;
     document.getElementById('modal').classList.add('active');
 
+    return { success:true, clientId:newId, docRef:d.docRef, siteName:d.generatedSiteName, isUpdate };
+
   } catch(e) {
     gdriveToken = null;
     const wrap = document.getElementById('modalContactButtons');
     if (wrap) wrap.innerHTML = '';
     document.getElementById('modalMsg').textContent = `⚠️ Save failed: ${e.message}\n\nPlease try again.`;
     document.getElementById('modal').classList.add('active');
+    return { success:false, error:e.message, siteName:d.generatedSiteName };
   }
 }
 
@@ -1944,6 +1991,178 @@ function closeModal() {
 }
 function showToast(msg) { const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2500); }
 
+// =====================================================================
+// BULK ONBOARD MODE — see the panel HTML near <body> for context. Every
+// submission below runs through the real uploadAndSend(), never a
+// reimplementation of it, so there is exactly one place that knows how
+// to create a client record.
+// =====================================================================
+const BULK_STATE_BDM = { WA: 'Michael Hodnett', NSW: 'Kevin Goverd', SA: 'Angelo Sayas' };
+function bulkBdmForState(state) { return BULK_STATE_BDM[state] || 'Brad Ryan'; }
+
+const BULK_VALID_DESCRIPTORS = ['Depot','Mine','Office','Other','Outside Payment Terminal (Unmanned)','Port','Reseller Customer Site','Service Station','Site','Store','Terminal','Warehouse','Workshop','Yard'];
+const BULK_VALID_STATES = ['WA','NSW','VIC','QLD','SA','TAS','NT','ACT'];
+
+let bulkRows = [];
+
+function initBulkModeIfRequested() {
+  if (new URLSearchParams(window.location.search).get('bulk') !== '1') return;
+  const panel = document.getElementById('bulkPanel');
+  if (panel) panel.style.display = 'block';
+}
+
+function bulkHeaderIndex(headerRow, name) {
+  return headerRow.findIndex(h => (h||'').toString().trim().toLowerCase() === name.toLowerCase());
+}
+
+async function handleBulkFile(evt) {
+  const file = evt.target.files[0];
+  if (!file) return;
+  const ab = await file.arrayBuffer();
+  const wb = XLSX.read(new Uint8Array(ab), { type:'array' });
+  const ws = wb.Sheets['Site Data'];
+  if (!ws) { showToast('⚠️ No "Site Data" sheet found in this file'); return; }
+  const rows = XLSX.utils.sheet_to_json(ws, { header:1 });
+  const headers = rows[0] || [];
+
+  // Matched by header text, not fixed column position — this sheet's
+  // column order has already shifted once between versions.
+  const col = name => bulkHeaderIndex(headers, name);
+  const idx = {
+    entity: col('Billing Entity'), descriptor: col('Descriptor'),
+    tag: col('Site Tag Name'), address: col('Site Address'),
+    suburb: col('Suburb'), state: col('State'), postcode: col('Postcode'),
+    cName: col('Site Contact- Name'), cRole: col('Site Contact - Role'),
+    cEmail: col('Site Contact- Email'), cPhone: col('Site Phone'),
+    pod: col('Email forProof Of Delivery'),
+  };
+  const missingRequired = ['entity','descriptor','suburb','state'].filter(k => idx[k] === -1);
+  if (missingRequired.length) {
+    showToast('⚠️ Sheet is missing expected column(s): ' + missingRequired.join(', '));
+    return;
+  }
+
+  bulkRows = [];
+  for (let r = 2; r < rows.length; r++) { // skip header row(0) + required/optional marker row(1)
+    const row = rows[r];
+    if (!row || !row.length) continue;
+    const get = i => (i === -1 ? '' : (row[i] ?? '')).toString().trim();
+    const entity = get(idx.entity);
+    if (!entity) continue; // blank row — end of data or a gap, either way nothing to validate
+    const descriptor = get(idx.descriptor);
+    const suburb = get(idx.suburb);
+    const state = get(idx.state);
+
+    const reasons = [];
+    if (!entity) reasons.push('Missing Billing Entity');
+    if (!descriptor) reasons.push('Missing Descriptor');
+    else if (!BULK_VALID_DESCRIPTORS.includes(descriptor)) reasons.push(`Descriptor "${descriptor}" not in the valid list`);
+    if (!suburb) reasons.push('Missing Suburb');
+    if (!state) reasons.push('Missing State');
+    else if (!BULK_VALID_STATES.includes(state)) reasons.push(`State "${state}" not valid`);
+
+    bulkRows.push({
+      sheetRow: r + 1, entity, descriptor, tag: get(idx.tag), address: get(idx.address),
+      suburb, state, postcode: get(idx.postcode),
+      cName: get(idx.cName), cRole: get(idx.cRole), cEmail: get(idx.cEmail), cPhone: get(idx.cPhone),
+      pod: get(idx.pod),
+      bdmName: bulkBdmForState(state),
+      valid: reasons.length === 0, reasons,
+      selected: false, result: null,
+    });
+  }
+  renderBulkReview();
+}
+
+function renderBulkReview() {
+  const wrap = document.getElementById('bulkReviewWrap');
+  const tbody = document.getElementById('bulkReviewBody');
+  tbody.innerHTML = '';
+  bulkRows.forEach((row, i) => {
+    const tr = document.createElement('tr');
+    tr.style.borderBottom = '1px solid var(--gray-light)';
+    tr.innerHTML = `
+      <td style="padding:6px;"><input type="checkbox" ${row.valid ? '' : 'disabled'} onchange="bulkRows[${i}].selected=this.checked"></td>
+      <td style="padding:6px;">${row.sheetRow}</td>
+      <td style="padding:6px;">${row.entity}</td>
+      <td style="padding:6px;">${row.tag || row.suburb}</td>
+      <td style="padding:6px;">${row.suburb}, ${row.state}</td>
+      <td style="padding:6px;">${row.bdmName}</td>
+      <td style="padding:6px;">${row.cName || '—'}</td>
+      <td style="padding:6px;color:${row.valid ? 'var(--green)' : 'var(--red)'};font-size:11px;">${row.valid ? '✓ Ready' : row.reasons.join('; ')}</td>
+      <td style="padding:6px;font-size:11px;" id="bulkResult${i}">${row.result ? (row.result.success ? '✅ ' + (row.result.docRef||'') : '❌ ' + row.result.error) : ''}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+  wrap.style.display = 'block';
+  const validCount = bulkRows.filter(r => r.valid).length;
+  document.getElementById('bulkSummary').textContent = `${bulkRows.length} row(s) parsed — ${validCount} valid, ${bulkRows.length - validCount} with issues.`;
+}
+
+function bulkSelectAllValid(check) {
+  bulkRows.forEach(r => { if (r.valid) r.selected = check; });
+  renderBulkReview();
+}
+
+async function runBulkSelected() {
+  const selected = bulkRows.filter(r => r.valid && r.selected);
+  if (!selected.length) { showToast('⚠️ No rows selected'); return; }
+  const runBtn = document.getElementById('bulkRunBtn');
+  runBtn.disabled = true;
+  const today = new Date().toISOString().split('T')[0];
+
+  for (let n = 0; n < selected.length; n++) {
+    const row = selected[n];
+    const i = bulkRows.indexOf(row);
+    document.getElementById('bulkProgress').textContent = `Running ${n+1} of ${selected.length}: ${row.entity} — ${row.suburb}`;
+
+    // Reset to a clean form before every row — otherwise leftover state
+    // from the previous submission (contacts, clone banner, etc.) could
+    // bleed into the next one.
+    clearAll();
+    const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
+    set('billingEntity', row.entity);
+    set('siteLocationName', row.tag);
+    set('descriptor', row.descriptor);
+    set('siteAddress', row.address);
+    set('suburb', row.suburb);
+    set('state', row.state);
+    set('postcode', row.postcode);
+    set('prospectDate', today);
+    set('c1Name', row.cName);
+    set('c1Role', row.cRole);
+    set('c1Email', row.cEmail);
+    set('c1Phone', row.cPhone);
+    if (row.pod) set('podEmail', row.pod);
+    set('bdmName', row.bdmName);
+    autoFill(row.bdmName);
+    generateSiteName();
+    generateTrackpodName();
+    updateProgress();
+
+    let result;
+    try {
+      result = await uploadAndSend();
+    } catch (e) {
+      result = { success:false, error: e.message };
+    }
+    row.result = result || { success:false, error:'No result returned' };
+
+    const cell = document.getElementById(`bulkResult${i}`);
+    if (cell) {
+      cell.textContent = row.result.success ? `✅ ${row.result.docRef||''}` : `❌ ${row.result.error}`;
+      cell.style.color = row.result.success ? 'var(--green)' : 'var(--red)';
+    }
+
+    closeModal();
+    if (n < selected.length - 1) await new Promise(res => setTimeout(res, 1500));
+  }
+
+  const okCount = selected.filter(r => r.result && r.result.success).length;
+  document.getElementById('bulkProgress').textContent = `Done — ${okCount} of ${selected.length} succeeded.`;
+  runBtn.disabled = false;
+}
+
 // INIT
 document.addEventListener('DOMContentLoaded', () => {
   try { if(typeof emailjs!=='undefined') emailjs.init(EMAILJS_PUBLIC_KEY); } catch(e) {}
@@ -1953,6 +2172,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('bdmNameTop').value = 'Michael Hodnett';
   autoFill('Michael Hodnett');
   updateProgress();
+  initBulkModeIfRequested();
 
   // ── UPDATE MODE UI ──
   const _urlMode = new URLSearchParams(window.location.search).get('mode');
