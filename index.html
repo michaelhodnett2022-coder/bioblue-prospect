@@ -156,7 +156,8 @@
               <th style="padding:6px;text-align:left;">BDM</th>
               <th style="padding:6px;text-align:left;">Contact</th>
               <th style="padding:6px;text-align:left;">Status</th>
-              <th style="padding:6px;text-align:left;">Result</th>
+              <th style="padding:6px;text-align:left;">Client Result</th>
+              <th style="padding:6px;text-align:left;">Admin Result</th>
             </tr>
           </thead>
           <tbody id="bulkReviewBody"></tbody>
@@ -865,29 +866,31 @@ function generateSiteName() {
     window._siteNameTooLong = false;
     return;
   }
-  // Build name — Site Location Name is optional; Descriptor never appears in the generated name
+  // Build name — Site Location Name is optional; Descriptor never appears in the generated name.
+  // The 50-character accounting-system limit applies to the Billing Entity
+  // field alone, not the finished name — the full name itself is never restricted.
   const name = siteLoc
     ? billing+' – '+siteLoc+' ('+suburb+', '+state+')'
     : billing+' ('+suburb+', '+state+')';
-  const len = name.length;
+  const billingLen = billing.length;
 
-  if (len > 50) {
+  if (billingLen > 50) {
     window._siteNameTooLong = true;
     if (out) {
-      out.value = '⚠️ Name too long — won\'t fit accounting system';
+      out.value = name;
       out.style.background = '#fee2e2'; out.style.color = '#b91c1c';
     }
     if (counter) {
-      counter.textContent = `${len}/50 characters — over limit. Shorten Billing Entity or Site Tag Name to continue.`;
+      counter.textContent = `Billing Entity: ${billingLen}/50 characters — over limit. Shorten Billing Entity to continue.`;
       counter.style.color = '#b91c1c'; counter.style.fontWeight = '700';
     }
   } else {
     window._siteNameTooLong = false;
     if (out) { out.value=name; out.style.background='#ede9fe'; out.style.color='#5b21b6'; }
     if (counter) {
-      counter.textContent = `${len}/50 characters`;
-      counter.style.color = len > 40 ? '#b45309' : 'var(--gray-mid)';
-      counter.style.fontWeight = len > 40 ? '700' : '400';
+      counter.textContent = `Billing Entity: ${billingLen}/50 characters`;
+      counter.style.color = billingLen > 40 ? '#b45309' : 'var(--gray-mid)';
+      counter.style.fontWeight = billingLen > 40 ? '700' : '400';
     }
   }
   // Sync companyName for backward compat
@@ -2026,7 +2029,7 @@ async function handleBulkFile(evt) {
   const headers = rows[0] || [];
 
   // Matched by header text, not fixed column position — this sheet's
-  // column order has already shifted once between versions.
+  // column order has already shifted between versions.
   const col = name => bulkHeaderIndex(headers, name);
   const idx = {
     entity: col('Billing Entity'), descriptor: col('Descriptor'),
@@ -2034,7 +2037,12 @@ async function handleBulkFile(evt) {
     suburb: col('Suburb'), state: col('State'), postcode: col('Postcode'),
     cName: col('Site Contact- Name'), cRole: col('Site Contact - Role'),
     cEmail: col('Site Contact- Email'), cPhone: col('Site Phone'),
-    pod: col('Email forProof Of Delivery'),
+    pod: col('Email forProof Of Delivery'), invoiceEmail: col('Email for Invoices'),
+    productType: col('Product Type'), adbluePrice: col('AdBlue Price'), freightPrice: col('Freight Price'),
+    adminName: col('Admin Contact Full name'), adminRole: col('Admin Contact Title'),
+    adminPhone: col('Admin Contact Phone'), adminEmail: col('Admin Contact Email'),
+    distributor: col('Distributor'), poReqd: col('Purchase orders reqd'),
+    managedDelivery: col('Managed delivery'), deliveryFreq: col('Delivery Frequency'),
   };
   const missingRequired = ['entity','descriptor','suburb','state'].filter(k => idx[k] === -1);
   if (missingRequired.length) {
@@ -2065,13 +2073,23 @@ async function handleBulkFile(evt) {
       sheetRow: r + 1, entity, descriptor, tag: get(idx.tag), address: get(idx.address),
       suburb, state, postcode: get(idx.postcode),
       cName: get(idx.cName), cRole: get(idx.cRole), cEmail: get(idx.cEmail), cPhone: get(idx.cPhone),
-      pod: get(idx.pod),
+      pod: get(idx.pod), invoiceEmail: get(idx.invoiceEmail),
+      productType: get(idx.productType), adbluePrice: get(idx.adbluePrice), freightPrice: get(idx.freightPrice),
+      adminName: get(idx.adminName), adminRole: get(idx.adminRole), adminPhone: get(idx.adminPhone), adminEmail: get(idx.adminEmail),
+      distributor: get(idx.distributor), poReqd: get(idx.poReqd), managedDelivery: get(idx.managedDelivery),
       bdmName: bulkBdmForState(state),
       valid: reasons.length === 0, reasons,
-      selected: false, result: null,
+      selected: false, result: null, adminResult: null,
     });
   }
   renderBulkReview();
+}
+
+function bulkYN(val) {
+  const v = (val || '').toString().trim().toLowerCase();
+  if (v === 'yes' || v === 'y') return 'Y';
+  if (v === 'no' || v === 'n') return 'N';
+  return '';
 }
 
 function renderBulkReview() {
@@ -2091,6 +2109,7 @@ function renderBulkReview() {
       <td style="padding:6px;">${row.cName || '—'}</td>
       <td style="padding:6px;color:${row.valid ? 'var(--green)' : 'var(--red)'};font-size:11px;">${row.valid ? '✓ Ready' : row.reasons.join('; ')}</td>
       <td style="padding:6px;font-size:11px;" id="bulkResult${i}">${row.result ? (row.result.success ? '✅ ' + (row.result.docRef||'') : '❌ ' + row.result.error) : ''}</td>
+      <td style="padding:6px;font-size:11px;" id="bulkAdminResult${i}">${row.adminResult ? (row.adminResult.success ? '✅ ' + (row.adminResult.docRef||'') : '❌ ' + row.adminResult.error) : ''}</td>
     `;
     tbody.appendChild(tr);
   });
@@ -2104,6 +2123,114 @@ function bulkSelectAllValid(check) {
   renderBulkReview();
 }
 
+// =====================================================================
+// Chained Admin Form pass — runs in a hidden iframe against the real,
+// deployed Site Admin form so this never reimplements its submission
+// logic. Shares the already-granted Drive token so it never triggers a
+// second sign-in popup, and calls the form's own fetchClientDetails()
+// first so Business/Admin Contact, address, etc. come from the client
+// record Client Form just wrote — only the fields that record doesn't
+// carry (Y/N answers, delivery frequency, pricing, PO/invoice email)
+// are set directly here.
+// =====================================================================
+const ADMIN_FORM_BASE = 'https://michaelhodnett2022-coder.github.io/bioblue-site-admin/';
+
+async function runAdminFormForClient(clientId, row) {
+  return new Promise((resolve) => {
+    const iframe = document.createElement('iframe');
+    iframe.style.display = 'none';
+    let settled = false;
+    const finish = (result) => { if (settled) return; settled = true; iframe.remove(); resolve(result); };
+    const timeoutId = setTimeout(() => finish({ success:false, error:'Admin Form iframe timed out (30s)' }), 30000);
+
+    iframe.onload = async () => {
+      try {
+        const win = iframe.contentWindow;
+        let waited = 0;
+        while (typeof win.fetchClientDetails !== 'function' && waited < 5000) {
+          await new Promise(res => setTimeout(res, 100));
+          waited += 100;
+        }
+        if (typeof win.fetchClientDetails !== 'function') {
+          clearTimeout(timeoutId);
+          finish({ success:false, error:'Admin Form did not load correctly' });
+          return;
+        }
+
+        win.gdriveToken = gdriveToken;
+        await win.fetchClientDetails(clientId);
+
+        const set = (id, val) => { const el = win.document.getElementById(id); if (el && val !== undefined && val !== null && val !== '') el.value = val; };
+
+        set('formDate', new Date().toISOString().split('T')[0]);
+        set('completedBy', row.bdmName);
+        if (typeof win.autoFill === 'function') win.autoFill(row.bdmName);
+
+        set('invoiceEmails', row.invoiceEmail);
+        set('poEmail', row.cEmail); // PO Email = Site Contact Email, per instruction
+
+        if (row.distributor && typeof win.setYN === 'function') win.setYN('distrib', bulkYN(row.distributor));
+        if (row.poReqd && typeof win.setYN === 'function') win.setYN('po', bulkYN(row.poReqd));
+        if (row.managedDelivery && typeof win.setYN === 'function') win.setYN('vendorManaged', bulkYN(row.managedDelivery));
+
+        // Delivery Frequency — sheet doesn't yet carry a real value for
+        // this batch, so every row goes in as "Other: Unknown" rather
+        // than leaving the field unanswered (it's required).
+        set('deliveryFrequency', 'Other');
+        if (typeof win.toggleDeliveryFreqOther === 'function') win.toggleDeliveryFreqOther('Other');
+        set('deliveryFrequencyOther', 'Unknown');
+
+        // Pricing — Product Type / AdBlue Price / Freight Price are
+        // split on \n in lockstep (multi-product sites). Any drum size
+        // (205L/210L/220L) is treated as the 210L product code — per
+        // instruction, they're all the same product.
+        const types = (row.productType || '').split('\n').map(s => s.trim()).filter(Boolean);
+        const adblues = (row.adbluePrice || '').toString().split('\n').map(s => s.trim());
+        const freights = (row.freightPrice || '').toString().split('\n').map(s => s.trim());
+
+        types.forEach((type, i) => {
+          const adblue = adblues[i] || '';
+          const freight = freights[i] || '';
+          const t = type.toLowerCase();
+          if (t.includes('bulk')) {
+            const chk = win.document.getElementById('chk_bulk');
+            if (chk) { chk.checked = true; if (typeof win.onBulkTick === 'function') win.onBulkTick(true); }
+            set('bulk_cpl', adblue);
+            set('bulk_freight', freight);
+          } else if (t.includes('ibc')) {
+            const chk = win.document.getElementById('chk_BB_ADB_1000');
+            if (chk) { chk.checked = true; if (typeof win.onProductTick === 'function') win.onProductTick('BB-ADB-1000', true); }
+            set('price_BB_ADB_1000', adblue);
+            set('freight_BB_ADB_1000', freight);
+          } else if (t.includes('drum')) {
+            const chk = win.document.getElementById('chk_BB_ADB_210');
+            if (chk) { chk.checked = true; if (typeof win.onProductTick === 'function') win.onProductTick('BB-ADB-210', true); }
+            set('price_BB_ADB_210', adblue);
+            set('freight_BB_ADB_210', freight);
+          }
+        });
+
+        if (typeof win.updateProgress === 'function') win.updateProgress();
+
+        let result;
+        try {
+          result = await win.uploadAndSend();
+        } catch (e) {
+          result = { success:false, error: e.message };
+        }
+        clearTimeout(timeoutId);
+        finish(result || { success:false, error:'No result returned' });
+      } catch (e) {
+        clearTimeout(timeoutId);
+        finish({ success:false, error: e.message });
+      }
+    };
+
+    iframe.src = ADMIN_FORM_BASE + '?client=' + encodeURIComponent(clientId);
+    document.body.appendChild(iframe);
+  });
+}
+
 async function runBulkSelected() {
   const selected = bulkRows.filter(r => r.valid && r.selected);
   if (!selected.length) { showToast('⚠️ No rows selected'); return; }
@@ -2114,7 +2241,7 @@ async function runBulkSelected() {
   for (let n = 0; n < selected.length; n++) {
     const row = selected[n];
     const i = bulkRows.indexOf(row);
-    document.getElementById('bulkProgress').textContent = `Running ${n+1} of ${selected.length}: ${row.entity} — ${row.suburb}`;
+    document.getElementById('bulkProgress').textContent = `Running ${n+1} of ${selected.length}: ${row.entity} — ${row.suburb} (Client Form)`;
 
     // Reset to a clean form before every row — otherwise leftover state
     // from the previous submission (contacts, clone banner, etc.) could
@@ -2130,10 +2257,20 @@ async function runBulkSelected() {
     set('postcode', row.postcode);
     set('prospectDate', today);
     set('c1Name', row.cName);
-    set('c1Role', row.cRole);
+    // Admin Form hard-requires a Business Contact role — where the sheet
+    // doesn't have one, "Site Contact" is used as a generic placeholder
+    // rather than leaving the row blocked.
+    set('c1Role', row.cRole || 'Site Contact');
     set('c1Email', row.cEmail);
     set('c1Phone', row.cPhone);
     if (row.pod) set('podEmail', row.pod);
+    // Admin Contact (c4) — writes to the same Client Records columns
+    // Admin Form reads back automatically, so it never needs re-entering
+    // in the Admin Form step below.
+    set('c4Name', row.adminName);
+    set('c4Role', row.adminRole);
+    set('c4Email', row.adminEmail);
+    set('c4Phone', row.adminPhone);
     set('bdmName', row.bdmName);
     autoFill(row.bdmName);
     generateSiteName();
@@ -2153,13 +2290,34 @@ async function runBulkSelected() {
       cell.textContent = row.result.success ? `✅ ${row.result.docRef||''}` : `❌ ${row.result.error}`;
       cell.style.color = row.result.success ? 'var(--green)' : 'var(--red)';
     }
-
     closeModal();
+
+    // Admin Form pass — only attempted if Client Form succeeded and
+    // returned a clientId to chain onto.
+    if (row.result.success && row.result.clientId) {
+      document.getElementById('bulkProgress').textContent = `Running ${n+1} of ${selected.length}: ${row.entity} — ${row.suburb} (Admin Form)`;
+      let adminResult;
+      try {
+        adminResult = await runAdminFormForClient(row.result.clientId, row);
+      } catch (e) {
+        adminResult = { success:false, error: e.message };
+      }
+      row.adminResult = adminResult || { success:false, error:'No result returned' };
+    } else {
+      row.adminResult = { success:false, error:'Skipped — Client Form did not succeed' };
+    }
+    const adminCell = document.getElementById(`bulkAdminResult${i}`);
+    if (adminCell) {
+      adminCell.textContent = row.adminResult.success ? `✅ ${row.adminResult.docRef||''}` : `❌ ${row.adminResult.error}`;
+      adminCell.style.color = row.adminResult.success ? 'var(--green)' : 'var(--red)';
+    }
+
     if (n < selected.length - 1) await new Promise(res => setTimeout(res, 1500));
   }
 
   const okCount = selected.filter(r => r.result && r.result.success).length;
-  document.getElementById('bulkProgress').textContent = `Done — ${okCount} of ${selected.length} succeeded.`;
+  const adminOkCount = selected.filter(r => r.adminResult && r.adminResult.success).length;
+  document.getElementById('bulkProgress').textContent = `Done — ${okCount} of ${selected.length} Client Form succeeded, ${adminOkCount} of ${selected.length} Admin Form succeeded.`;
   runBtn.disabled = false;
 }
 
