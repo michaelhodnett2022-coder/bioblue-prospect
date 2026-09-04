@@ -2051,7 +2051,12 @@ async function handleBulkFile(evt) {
   }
 
   bulkRows = [];
-  for (let r = 2; r < rows.length; r++) { // skip header row(0) + required/optional marker row(1)
+  // Row 2 is the "Required/Optional" marker row in the original template —
+  // but a trimmed-down test copy may not have it at all, in which case row 2
+  // is real data and must not be skipped. Detected by content, not assumed.
+  const _row2EntityCell = (rows[1]?.[idx.entity] || '').toString().trim().toLowerCase();
+  const dataStartIdx = (_row2EntityCell === 'required' || _row2EntityCell === 'optional') ? 2 : 1;
+  for (let r = dataStartIdx; r < rows.length; r++) {
     const row = rows[r];
     if (!row || !row.length) continue;
     const get = i => (i === -1 ? '' : (row[i] ?? '')).toString().trim();
