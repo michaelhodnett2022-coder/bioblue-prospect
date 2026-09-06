@@ -2015,7 +2015,12 @@ function initBulkModeIfRequested() {
 }
 
 function bulkHeaderIndex(headerRow, name) {
-  return headerRow.findIndex(h => (h||'').toString().trim().toLowerCase() === name.toLowerCase());
+  // Prefix match, not exact — sheet headers have picked up trailing
+  // qualifiers before ("(optional)", stray spaces) that would silently
+  // break an exact match. Checked against the full column list to avoid
+  // one header accidentally matching as a prefix of another.
+  const target = name.trim().toLowerCase();
+  return headerRow.findIndex(h => (h||'').toString().trim().toLowerCase().startsWith(target));
 }
 
 async function handleBulkFile(evt) {
@@ -2037,7 +2042,8 @@ async function handleBulkFile(evt) {
     suburb: col('Suburb'), state: col('State'), postcode: col('Postcode'),
     cName: col('Site Contact- Name'), cRole: col('Site Contact - Role'),
     cEmail: col('Site Contact- Email'), cPhone: col('Site Phone'),
-    pod: col('Email forProof Of Delivery'), invoiceEmail: col('Email for Invoices'),
+    pod: col('Email forProof Of Delivery'), additionalPod: col('Additional POD Email'), invoiceEmail: col('Email for Invoices'),
+    otherContactPhone: col('Other Contact Phone'),
     productType: col('Product Type'), adbluePrice: col('AdBlue Price'), freightPrice: col('Freight Price'),
     adminName: col('Admin Contact Full name'), adminRole: col('Admin Contact Title'),
     adminPhone: col('Admin Contact Phone'), adminEmail: col('Admin Contact Email'),
@@ -2078,7 +2084,8 @@ async function handleBulkFile(evt) {
       sheetRow: r + 1, entity, descriptor, tag: get(idx.tag), address: get(idx.address),
       suburb, state, postcode: get(idx.postcode),
       cName: get(idx.cName), cRole: get(idx.cRole), cEmail: get(idx.cEmail), cPhone: get(idx.cPhone),
-      pod: get(idx.pod), invoiceEmail: get(idx.invoiceEmail),
+      pod: get(idx.pod), additionalPod: get(idx.additionalPod), invoiceEmail: get(idx.invoiceEmail),
+      otherContactPhone: get(idx.otherContactPhone),
       productType: get(idx.productType), adbluePrice: get(idx.adbluePrice), freightPrice: get(idx.freightPrice),
       adminName: get(idx.adminName), adminRole: get(idx.adminRole), adminPhone: get(idx.adminPhone), adminEmail: get(idx.adminEmail),
       distributor: get(idx.distributor), poReqd: get(idx.poReqd), managedDelivery: get(idx.managedDelivery),
@@ -2176,6 +2183,7 @@ async function runAdminFormForClient(clientId, row) {
 
         set('invoiceEmails', row.invoiceEmail);
         set('poEmail', row.cEmail); // PO Email = Site Contact Email, per instruction
+        set('podEmail2', row.additionalPod);
 
         if (row.distributor && typeof win.setYN === 'function') win.setYN('distrib', bulkYN(row.distributor));
         if (row.poReqd && typeof win.setYN === 'function') win.setYN('po', bulkYN(row.poReqd));
@@ -2279,6 +2287,8 @@ async function runBulkSelected() {
     set('c4Role', row.adminRole);
     set('c4Email', row.adminEmail);
     set('c4Phone', row.adminPhone);
+    // Other/Additional Contact (c5) — phone only, no name given for this one
+    if (row.otherContactPhone) set('c5Phone', row.otherContactPhone);
     set('bdmName', row.bdmName);
     autoFill(row.bdmName);
     generateSiteName();
