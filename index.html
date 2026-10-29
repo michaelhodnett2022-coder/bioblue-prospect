@@ -51,7 +51,7 @@
   .field-row.three { grid-template-columns:1fr 1fr 1fr; }
   @media(max-width:520px) { .field-row,.field-row.three { grid-template-columns:1fr; } }
   .field-group { display:flex;flex-direction:column;gap:5px; }
-  .field-label { font-size:12px;font-weight:600;color:var(--gray-mid);text-transform:uppercase;letter-spacing:0.4px; }
+  .field-label { font-size:14px;font-weight:700;color:var(--gray-dark);text-transform:uppercase;letter-spacing:0.4px; }
   .field-label.required::after { content:' *';color:var(--red); }
 
   input[type="text"],input[type="email"],input[type="tel"],input[type="date"],input[type="number"],textarea,select {
@@ -121,51 +121,6 @@
 </style>
 </head>
 <body>
-
-<!-- =====================================================================
-     BULK ONBOARD PANEL — only shown with ?bulk=1 in the URL. Invisible
-     and inert for every normal BDM opening this form as usual. Runs the
-     exact same uploadAndSend() a manual submission uses, one row at a
-     time, so there is no separate/duplicated submission logic to drift
-     out of sync with the real form.
-     ===================================================================== -->
-<div id="bulkPanel" style="display:none;background:var(--purple-pale);border-bottom:3px solid var(--purple);padding:16px;font-family:'DM Sans',sans-serif;">
-  <div style="max-width:1100px;margin:0 auto;">
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
-      <div style="background:var(--purple);color:white;font-weight:700;font-size:12px;letter-spacing:0.5px;border-radius:6px;padding:4px 10px;">BULK ONBOARD</div>
-      <div style="font-size:13px;color:var(--gray-mid);">Loads a site sheet, validates each row, then submits selected rows through this form's normal submission flow.</div>
-    </div>
-    <input type="file" id="bulkFileInput" accept=".xlsx" onchange="handleBulkFile(event)" style="margin-bottom:10px;">
-    <div id="bulkSummary" style="font-size:13px;color:var(--gray-dark);margin-bottom:8px;"></div>
-    <div id="bulkReviewWrap" style="display:none;">
-      <div style="margin-bottom:8px;">
-        <button onclick="bulkSelectAllValid(true)" class="btn" style="background:white;border:1px solid var(--purple);color:var(--purple);border-radius:6px;padding:6px 12px;font-size:12px;cursor:pointer;">Select all valid</button>
-        <button onclick="bulkSelectAllValid(false)" class="btn" style="background:white;border:1px solid var(--gray-light);color:var(--gray-mid);border-radius:6px;padding:6px 12px;font-size:12px;cursor:pointer;">Clear selection</button>
-        <button id="bulkRunBtn" onclick="runBulkSelected()" style="background:var(--purple);color:white;border:none;border-radius:6px;padding:6px 16px;font-size:12px;font-weight:600;cursor:pointer;">▶ Run Selected</button>
-      </div>
-      <div id="bulkProgress" style="font-size:12px;color:var(--purple-dark);margin-bottom:8px;font-weight:600;"></div>
-      <div style="max-height:360px;overflow:auto;border:1px solid var(--gray-light);border-radius:8px;background:white;">
-        <table style="width:100%;border-collapse:collapse;font-size:12px;">
-          <thead style="position:sticky;top:0;background:var(--purple-light);">
-            <tr>
-              <th style="padding:6px;text-align:left;">Run</th>
-              <th style="padding:6px;text-align:left;">Sheet Row</th>
-              <th style="padding:6px;text-align:left;">Billing Entity</th>
-              <th style="padding:6px;text-align:left;">Site</th>
-              <th style="padding:6px;text-align:left;">Suburb, State</th>
-              <th style="padding:6px;text-align:left;">BDM</th>
-              <th style="padding:6px;text-align:left;">Contact</th>
-              <th style="padding:6px;text-align:left;">Status</th>
-              <th style="padding:6px;text-align:left;">Client Result</th>
-              <th style="padding:6px;text-align:left;">Admin Result</th>
-            </tr>
-          </thead>
-          <tbody id="bulkReviewBody"></tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-</div>
 
 <div class="app-header">
   <div class="header-top">
@@ -294,11 +249,11 @@
 
         <div class="field-group" style="margin-bottom:10px;">
           <label class="field-label required">Customer Billing Entity</label>
-          <input type="text" id="billingEntity" placeholder="Who BioBlue invoices e.g. Wickhams" oninput="generateSiteName();generateTrackpodName();updateProgress()">
+          <input type="text" id="billingEntity" placeholder="" oninput="generateSiteName();generateTrackpodName();updateProgress()">
         </div>
 
         <div class="field-group" style="margin-bottom:10px;">
-          <label class="field-label">Site Tag Name <span style="font-weight:400;font-size:10px;">(This is what the customer calls this site eg Rosies Roadhouse)</span></label>
+          <label class="field-label">Site Tag Name</label>
           <input type="text" id="siteLocationName" placeholder="" oninput="generateSiteName();generateTrackpodName();updateProgress()">
         </div>
 
@@ -340,15 +295,15 @@
         </div>
 
         <div class="field-group">
-          <label class="field-label">Generated Site Name <span style="font-weight:400;font-size:10px;">(locked)</span></label>
-          <input type="text" id="generatedSiteName" readonly placeholder="Fill fields above to generate name..."
+          <label class="field-label">Generated Site Name</label>
+          <input type="text" id="generatedSiteName" readonly placeholder=""
             style="background:#f0f0ff;border-color:var(--purple-light);color:var(--purple-dark);font-weight:700;cursor:default;">
           <div id="siteNameCharCount" style="font-size:11px;margin-top:4px;color:var(--gray-mid);"></div>
         </div>
 
         <div class="field-group" style="margin-top:10px;">
-          <label class="field-label">Site Name (Trackpod) <span style="font-weight:400;font-size:10px;">(locked)</span></label>
-          <input type="text" id="trackpodName" readonly placeholder="Fill fields above to generate name..."
+          <label class="field-label">Site Name (Trackpod)</label>
+          <input type="text" id="trackpodName" readonly placeholder=""
             style="background:#f0f0ff;border-color:var(--purple-light);color:var(--purple-dark);font-weight:700;cursor:default;">
         </div>
       </div>
@@ -358,7 +313,7 @@
         <label class="field-label">Site Address</label>
         <div class="address-field-wrap">
           <div style="position:relative;">
-            <input type="text" id="siteAddress" placeholder="Street address" style="padding-right:110px;" oninput="addrAC(this,'addrDrop')" autocomplete="off">
+            <input type="text" id="siteAddress" placeholder="" style="padding-right:110px;" oninput="addrAC(this,'addrDrop')" autocomplete="off">
             <div id="addrDrop" style="display:none;position:absolute;top:100%;left:0;right:0;background:white;border:1px solid #ccc;border-radius:0 0 8px 8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);z-index:999;max-height:220px;overflow-y:auto;"></div>
           </div>
           <button class="gps-btn" onclick="getGPS()">📍 Use GPS</button>
@@ -369,7 +324,7 @@
       <div class="field-row">
         <div class="field-group">
           <label class="field-label">Postcode</label>
-          <input type="text" id="postcode" placeholder="6106" maxlength="4">
+          <input type="text" id="postcode" placeholder="" maxlength="4">
         </div>
         <div class="field-group">
           <!-- spacer -->
@@ -414,18 +369,18 @@
 
       <div class="field-group" style="margin-bottom:14px;">
         <label class="field-label">Proof of Delivery (POD) Email</label>
-        <input type="email" id="podEmail" placeholder="e.g. pod@company.com.au">
+        <input type="email" id="podEmail" placeholder="">
         <div style="font-size:11px;color:var(--gray-mid);margin-top:4px;">Shared with Admin and Audit forms — fills automatically if already entered there</div>
       </div>
 
       <div class="field-group" style="margin-bottom:14px;">
-        <label class="field-label">Additional POD Email <span style="font-weight:400;font-size:10px;">(optional)</span></label>
-        <input type="email" id="podEmail2" placeholder="e.g. pod2@company.com.au">
+        <label class="field-label">Additional POD Email</label>
+        <input type="email" id="podEmail2" placeholder="">
       </div>
 
       <div class="field-group" style="margin-bottom:14px;">
-        <label class="field-label">Additional POD Email <span style="font-weight:400;font-size:10px;">(optional)</span></label>
-        <input type="email" id="podEmail3" placeholder="e.g. pod3@company.com.au">
+        <label class="field-label">Additional POD Email</label>
+        <input type="email" id="podEmail3" placeholder="">
       </div>
       <div style="border-top:1.5px solid var(--gray-light);margin-bottom:16px;"></div>
 
@@ -438,21 +393,21 @@
           <div class="field-row">
             <div class="field-group">
               <label class="field-label">Full Name</label>
-              <input type="text" id="c1Name" placeholder="Full name">
+              <input type="text" id="c1Name" placeholder="">
             </div>
             <div class="field-group">
               <label class="field-label">Title / Role</label>
-              <input type="text" id="c1Role" placeholder="e.g. Site Manager">
+              <input type="text" id="c1Role" placeholder="">
             </div>
           </div>
           <div class="field-row">
             <div class="field-group">
               <label class="field-label">Email</label>
-              <input type="email" id="c1Email" placeholder="name@company.com.au">
+              <input type="email" id="c1Email" placeholder="">
             </div>
             <div class="field-group">
               <label class="field-label">Phone</label>
-              <input type="tel" id="c1Phone" placeholder="04XX XXX XXX">
+              <input type="tel" id="c1Phone" placeholder="">
             </div>
           </div>
         </div>
@@ -475,21 +430,21 @@
           <div class="field-row">
             <div class="field-group">
               <label class="field-label">Full Name</label>
-              <input type="text" id="c2Name" placeholder="Full name">
+              <input type="text" id="c2Name" placeholder="">
             </div>
             <div class="field-group">
               <label class="field-label">Title / Role</label>
-              <input type="text" id="c2Role" placeholder="e.g. General Manager">
+              <input type="text" id="c2Role" placeholder="">
             </div>
           </div>
           <div class="field-row">
             <div class="field-group">
               <label class="field-label">Email</label>
-              <input type="email" id="c2Email" placeholder="name@company.com.au">
+              <input type="email" id="c2Email" placeholder="">
             </div>
             <div class="field-group">
               <label class="field-label">Phone</label>
-              <input type="tel" id="c2Phone" placeholder="04XX XXX XXX">
+              <input type="tel" id="c2Phone" placeholder="">
             </div>
           </div>
         </div>
@@ -513,21 +468,21 @@
           <div class="field-row">
             <div class="field-group">
               <label class="field-label">Full Name</label>
-              <input type="text" id="c3Name" placeholder="Full name">
+              <input type="text" id="c3Name" placeholder="">
             </div>
             <div class="field-group">
               <label class="field-label">Title / Role</label>
-              <input type="text" id="c3Role" placeholder="e.g. Transport Manager">
+              <input type="text" id="c3Role" placeholder="">
             </div>
           </div>
           <div class="field-row">
             <div class="field-group">
               <label class="field-label">Email</label>
-              <input type="email" id="c3Email" placeholder="name@company.com.au">
+              <input type="email" id="c3Email" placeholder="">
             </div>
             <div class="field-group">
               <label class="field-label">Phone</label>
-              <input type="tel" id="c3Phone" placeholder="04XX XXX XXX">
+              <input type="tel" id="c3Phone" placeholder="">
             </div>
           </div>
         </div>
@@ -552,21 +507,21 @@
           <div class="field-row">
             <div class="field-group">
               <label class="field-label">Full Name</label>
-              <input type="text" id="c4Name" placeholder="Full name">
+              <input type="text" id="c4Name" placeholder="">
             </div>
             <div class="field-group">
               <label class="field-label">Title / Role</label>
-              <input type="text" id="c4Role" placeholder="e.g. Accounts Payable">
+              <input type="text" id="c4Role" placeholder="">
             </div>
           </div>
           <div class="field-row">
             <div class="field-group">
               <label class="field-label">Email</label>
-              <input type="email" id="c4Email" placeholder="accounts@company.com.au">
+              <input type="email" id="c4Email" placeholder="">
             </div>
             <div class="field-group">
               <label class="field-label">Phone</label>
-              <input type="tel" id="c4Phone" placeholder="04XX XXX XXX">
+              <input type="tel" id="c4Phone" placeholder="">
             </div>
           </div>
         </div>
@@ -591,26 +546,26 @@
           </div>
           <div class="field-group" style="margin-bottom:10px;">
             <label class="field-label">Contact Type / Role Description</label>
-            <input type="text" id="c5Label" placeholder="e.g. Safety Officer, Operations Manager">
+            <input type="text" id="c5Label" placeholder="">
           </div>
           <div class="field-row">
             <div class="field-group">
               <label class="field-label">Full Name</label>
-              <input type="text" id="c5Name" placeholder="Full name">
+              <input type="text" id="c5Name" placeholder="">
             </div>
             <div class="field-group">
               <label class="field-label">Title / Role</label>
-              <input type="text" id="c5Role" placeholder="e.g. HSE Manager">
+              <input type="text" id="c5Role" placeholder="">
             </div>
           </div>
           <div class="field-row">
             <div class="field-group">
               <label class="field-label">Email</label>
-              <input type="email" id="c5Email" placeholder="name@company.com.au">
+              <input type="email" id="c5Email" placeholder="">
             </div>
             <div class="field-group">
               <label class="field-label">Phone</label>
-              <input type="tel" id="c5Phone" placeholder="04XX XXX XXX">
+              <input type="tel" id="c5Phone" placeholder="">
             </div>
           </div>
         </div>
@@ -655,7 +610,7 @@
       <div class="field-row">
         <div class="field-group">
           <label class="field-label">Estimated Current Price</label>
-          <input type="text" id="estCurrentPrice" placeholder="e.g. 85cpl or $1.10/L">
+          <input type="text" id="estCurrentPrice" placeholder="">
         </div>
       </div>
 
@@ -685,7 +640,7 @@
 
       <div class="field-group" style="margin-bottom:16px;">
         <label class="field-label">Conversation Notes</label>
-        <textarea id="convNotes" rows="4" placeholder="What was discussed? Key pain points, objections, opportunities..." oninput="updateProgress()"></textarea>
+        <textarea id="convNotes" rows="4" placeholder="" oninput="updateProgress()"></textarea>
       </div>
 
       <div class="followup-card">
@@ -732,7 +687,7 @@
         </div>
         <div class="field-group">
           <label class="field-label">BDM Email</label>
-          <input type="email" id="bdmEmail" placeholder="bdm@bioblue.com.au">
+          <input type="email" id="bdmEmail" placeholder="">
         </div>
       </div>
     </div>
@@ -866,31 +821,29 @@ function generateSiteName() {
     window._siteNameTooLong = false;
     return;
   }
-  // Build name — Site Location Name is optional; Descriptor never appears in the generated name.
-  // The 50-character accounting-system limit applies to the Billing Entity
-  // field alone, not the finished name — the full name itself is never restricted.
+  // Build name — Site Location Name is optional; Descriptor never appears in the generated name
   const name = siteLoc
     ? billing+' – '+siteLoc+' ('+suburb+', '+state+')'
     : billing+' ('+suburb+', '+state+')';
-  const billingLen = billing.length;
+  const len = name.length;
 
-  if (billingLen > 50) {
+  if (len > 50) {
     window._siteNameTooLong = true;
     if (out) {
-      out.value = name;
+      out.value = '⚠️ Name too long — won\'t fit accounting system';
       out.style.background = '#fee2e2'; out.style.color = '#b91c1c';
     }
     if (counter) {
-      counter.textContent = `Billing Entity: ${billingLen}/50 characters — over limit. Shorten Billing Entity to continue.`;
+      counter.textContent = `${len}/50 characters — over limit. Shorten Billing Entity or Site Tag Name to continue.`;
       counter.style.color = '#b91c1c'; counter.style.fontWeight = '700';
     }
   } else {
     window._siteNameTooLong = false;
     if (out) { out.value=name; out.style.background='#ede9fe'; out.style.color='#5b21b6'; }
     if (counter) {
-      counter.textContent = `Billing Entity: ${billingLen}/50 characters`;
-      counter.style.color = billingLen > 40 ? '#b45309' : 'var(--gray-mid)';
-      counter.style.fontWeight = billingLen > 40 ? '700' : '400';
+      counter.textContent = `${len}/50 characters`;
+      counter.style.color = len > 40 ? '#b45309' : 'var(--gray-mid)';
+      counter.style.fontWeight = len > 40 ? '700' : '400';
     }
   }
   // Sync companyName for backward compat
@@ -1788,13 +1741,13 @@ async function appendConversationNote(d) {
 
 async function uploadAndSend() {
   const d = collectData();
-  if (!d.bdmName) { showToast('⚠️ Please select your name'); return { success:false, error:'No BDM selected' }; }
+  if (!d.bdmName) { showToast('⚠️ Please select your name'); return; }
 
   if (window._siteNameTooLong) {
     showToast('⚠️ Generated Site Name is over 50 characters — shorten Billing Entity or Site Tag Name before submitting');
     const out = document.getElementById('generatedSiteName');
     if (out) out.scrollIntoView({ behavior:'smooth', block:'center' });
-    return { success:false, error:'Generated Site Name over 50 characters' };
+    return;
   }
 
   // ── UPDATE MODE — append conversation note, no PDF ──
@@ -1805,17 +1758,17 @@ async function uploadAndSend() {
       // Scroll to the conversation section
       const convEl = document.getElementById('convNotes');
       if (convEl) { const s = document.getElementById('s4'); if(s && s.classList.contains('collapsed')) toggleSection('s4'); setTimeout(() => convEl.scrollIntoView({ behavior:'smooth', block:'center' }), 200); }
-      return { success:false, error:'Conversation notes required (update mode)' };
+      return;
     }
     await appendConversationNote(d);
-    return { success:true, isUpdate:true };
+    return;
   }
 
-  if (!d.billingEntity || !d.billingEntity.trim()) { showToast('⚠️ Customer Billing Entity required'); return { success:false, error:'Billing Entity required' }; }
-  if (!d.descriptor) { showToast('⚠️ Descriptor required'); return { success:false, error:'Descriptor required' }; }
-  if (!d.suburb || !d.suburb.trim()) { showToast('⚠️ Suburb required'); return { success:false, error:'Suburb required' }; }
-  if (!d.state) { showToast('⚠️ State required'); return { success:false, error:'State required' }; }
-  if (!d.prospectDate) { showToast('⚠️ Date required'); return { success:false, error:'Date required' }; }
+  if (!d.billingEntity || !d.billingEntity.trim()) { showToast('⚠️ Customer Billing Entity required'); return; }
+  if (!d.descriptor) { showToast('⚠️ Descriptor required'); return; }
+  if (!d.suburb || !d.suburb.trim()) { showToast('⚠️ Suburb required'); return; }
+  if (!d.state) { showToast('⚠️ State required'); return; }
+  if (!d.prospectDate) { showToast('⚠️ Date required'); return; }
 
   const existingClientId = new URLSearchParams(window.location.search).get('client');
 
@@ -1834,7 +1787,7 @@ async function uploadAndSend() {
         document.getElementById('modalFieldToolsBtn').style.display = 'inline-block';
         document.getElementById('modal').classList.add('active');
         showToast('🚫 Duplicate blocked — load the existing client instead');
-        return { success:false, error:'Duplicate site name — already exists ('+dupe.existingName+')', duplicate:true };
+        return;
       }
     } catch(e) {
       console.warn('Duplicate pre-check skipped:', e.message);
@@ -1920,15 +1873,12 @@ async function uploadAndSend() {
     document.getElementById('modalMsg').textContent = `✅ Prospect ${isUpdate?'updated':'submitted'}!\n\n🆔 Document Ref: ${d.docRef}\n☁️ PDF ${existingFileId?'updated':'uploaded'} to Google Drive\n📊 Client record ${isUpdate?'updated':'created'} — Prospect ✓${d.followupDate ? '\n📅 Calendar invite sent to '+d.bdmEmail : ''}${_followUpWarning}`;
     document.getElementById('modal').classList.add('active');
 
-    return { success:true, clientId:newId, docRef:d.docRef, siteName:d.generatedSiteName, isUpdate };
-
   } catch(e) {
     gdriveToken = null;
     const wrap = document.getElementById('modalContactButtons');
     if (wrap) wrap.innerHTML = '';
     document.getElementById('modalMsg').textContent = `⚠️ Save failed: ${e.message}\n\nPlease try again.`;
     document.getElementById('modal').classList.add('active');
-    return { success:false, error:e.message, siteName:d.generatedSiteName };
   }
 }
 
@@ -1994,351 +1944,6 @@ function closeModal() {
 }
 function showToast(msg) { const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2500); }
 
-// =====================================================================
-// BULK ONBOARD MODE — see the panel HTML near <body> for context. Every
-// submission below runs through the real uploadAndSend(), never a
-// reimplementation of it, so there is exactly one place that knows how
-// to create a client record.
-// =====================================================================
-const BULK_STATE_BDM = { WA: 'Michael Hodnett', NSW: 'Kevin Goverd', SA: 'Angelo Sayas' };
-function bulkBdmForState(state) { return BULK_STATE_BDM[state] || 'Brad Ryan'; }
-
-const BULK_VALID_DESCRIPTORS = ['Depot','Mine','Office','Other','Outside Payment Terminal (Unmanned)','Port','Reseller Customer Site','Service Station','Site','Store','Terminal','Warehouse','Workshop','Yard'];
-const BULK_VALID_STATES = ['WA','NSW','VIC','QLD','SA','TAS','NT','ACT'];
-
-let bulkRows = [];
-
-function initBulkModeIfRequested() {
-  if (new URLSearchParams(window.location.search).get('bulk') !== '1') return;
-  const panel = document.getElementById('bulkPanel');
-  if (panel) panel.style.display = 'block';
-}
-
-function bulkHeaderIndex(headerRow, name) {
-  // Prefix match, not exact — sheet headers have picked up trailing
-  // qualifiers before ("(optional)", stray spaces) that would silently
-  // break an exact match. Checked against the full column list to avoid
-  // one header accidentally matching as a prefix of another.
-  const target = name.trim().toLowerCase();
-  return headerRow.findIndex(h => (h||'').toString().trim().toLowerCase().startsWith(target));
-}
-
-async function handleBulkFile(evt) {
-  const file = evt.target.files[0];
-  if (!file) return;
-  const ab = await file.arrayBuffer();
-  const wb = XLSX.read(new Uint8Array(ab), { type:'array' });
-  const ws = wb.Sheets['Site Data'];
-  if (!ws) { showToast('⚠️ No "Site Data" sheet found in this file'); return; }
-  const rows = XLSX.utils.sheet_to_json(ws, { header:1 });
-  const headers = rows[0] || [];
-
-  // Matched by header text, not fixed column position — this sheet's
-  // column order has already shifted between versions.
-  const col = name => bulkHeaderIndex(headers, name);
-  const idx = {
-    entity: col('Billing Entity'), descriptor: col('Descriptor'),
-    tag: col('Site Tag Name'), address: col('Site Address'),
-    suburb: col('Suburb'), state: col('State'), postcode: col('Postcode'),
-    cName: col('Site Contact- Name'), cRole: col('Site Contact - Role'),
-    cEmail: col('Site Contact- Email'), cPhone: col('Site Phone'),
-    pod: col('Email forProof Of Delivery'), additionalPod: col('Additional POD Email'), invoiceEmail: col('Email for Invoices'),
-    otherContactPhone: col('Other Contact Phone'),
-    productType: col('Product Type'), adbluePrice: col('AdBlue Price'), freightPrice: col('Freight Price'),
-    adminName: col('Admin Contact Full name'), adminRole: col('Admin Contact Title'),
-    adminPhone: col('Admin Contact Phone'), adminEmail: col('Admin Contact Email'),
-    distributor: col('Distributor'), poReqd: col('Purchase orders reqd'),
-    managedDelivery: col('Managed delivery'), deliveryFreq: col('Delivery Frequency'),
-  };
-  const missingRequired = ['entity','descriptor','suburb','state'].filter(k => idx[k] === -1);
-  if (missingRequired.length) {
-    showToast('⚠️ Sheet is missing expected column(s): ' + missingRequired.join(', '));
-    return;
-  }
-
-  bulkRows = [];
-  // Row 2 is the "Required/Optional" marker row in the original template —
-  // but a trimmed-down test copy may not have it at all, in which case row 2
-  // is real data and must not be skipped. Detected by content, not assumed.
-  const _row2EntityCell = (rows[1]?.[idx.entity] || '').toString().trim().toLowerCase();
-  const dataStartIdx = (_row2EntityCell === 'required' || _row2EntityCell === 'optional') ? 2 : 1;
-  for (let r = dataStartIdx; r < rows.length; r++) {
-    const row = rows[r];
-    if (!row || !row.length) continue;
-    const get = i => (i === -1 ? '' : (row[i] ?? '')).toString().trim();
-    const entity = get(idx.entity);
-    if (!entity) continue; // blank row — end of data or a gap, either way nothing to validate
-    const descriptor = get(idx.descriptor);
-    const suburb = get(idx.suburb);
-    const state = get(idx.state);
-
-    const reasons = [];
-    if (!entity) reasons.push('Missing Billing Entity');
-    if (!descriptor) reasons.push('Missing Descriptor');
-    else if (!BULK_VALID_DESCRIPTORS.includes(descriptor)) reasons.push(`Descriptor "${descriptor}" not in the valid list`);
-    if (!suburb) reasons.push('Missing Suburb');
-    if (!state) reasons.push('Missing State');
-    else if (!BULK_VALID_STATES.includes(state)) reasons.push(`State "${state}" not valid`);
-
-    bulkRows.push({
-      sheetRow: r + 1, entity, descriptor, tag: get(idx.tag), address: get(idx.address),
-      suburb, state, postcode: get(idx.postcode),
-      cName: get(idx.cName), cRole: get(idx.cRole), cEmail: get(idx.cEmail), cPhone: get(idx.cPhone),
-      pod: get(idx.pod), additionalPod: get(idx.additionalPod), invoiceEmail: get(idx.invoiceEmail),
-      otherContactPhone: get(idx.otherContactPhone),
-      productType: get(idx.productType), adbluePrice: get(idx.adbluePrice), freightPrice: get(idx.freightPrice),
-      adminName: get(idx.adminName), adminRole: get(idx.adminRole), adminPhone: get(idx.adminPhone), adminEmail: get(idx.adminEmail),
-      distributor: get(idx.distributor), poReqd: get(idx.poReqd), managedDelivery: get(idx.managedDelivery),
-      bdmName: bulkBdmForState(state),
-      valid: reasons.length === 0, reasons,
-      selected: false, result: null, adminResult: null,
-    });
-  }
-  renderBulkReview();
-}
-
-function bulkYN(val) {
-  const v = (val || '').toString().trim().toLowerCase();
-  if (v === 'yes' || v === 'y') return 'Y';
-  if (v === 'no' || v === 'n') return 'N';
-  return '';
-}
-
-function renderBulkReview() {
-  const wrap = document.getElementById('bulkReviewWrap');
-  const tbody = document.getElementById('bulkReviewBody');
-  tbody.innerHTML = '';
-  bulkRows.forEach((row, i) => {
-    const tr = document.createElement('tr');
-    tr.style.borderBottom = '1px solid var(--gray-light)';
-    tr.innerHTML = `
-      <td style="padding:6px;"><input type="checkbox" ${row.valid ? '' : 'disabled'} onchange="bulkRows[${i}].selected=this.checked"></td>
-      <td style="padding:6px;">${row.sheetRow}</td>
-      <td style="padding:6px;">${row.entity}</td>
-      <td style="padding:6px;">${row.tag || row.suburb}</td>
-      <td style="padding:6px;">${row.suburb}, ${row.state}</td>
-      <td style="padding:6px;">${row.bdmName}</td>
-      <td style="padding:6px;">${row.cName || '—'}</td>
-      <td style="padding:6px;color:${row.valid ? 'var(--green)' : 'var(--red)'};font-size:11px;">${row.valid ? '✓ Ready' : row.reasons.join('; ')}</td>
-      <td style="padding:6px;font-size:11px;" id="bulkResult${i}">${row.result ? (row.result.success ? '✅ ' + (row.result.docRef||'') : '❌ ' + row.result.error) : ''}</td>
-      <td style="padding:6px;font-size:11px;" id="bulkAdminResult${i}">${row.adminResult ? (row.adminResult.success ? '✅ ' + (row.adminResult.docRef||'') : '❌ ' + row.adminResult.error) : ''}</td>
-    `;
-    tbody.appendChild(tr);
-  });
-  wrap.style.display = 'block';
-  const validCount = bulkRows.filter(r => r.valid).length;
-  document.getElementById('bulkSummary').textContent = `${bulkRows.length} row(s) parsed — ${validCount} valid, ${bulkRows.length - validCount} with issues.`;
-}
-
-function bulkSelectAllValid(check) {
-  bulkRows.forEach(r => { if (r.valid) r.selected = check; });
-  renderBulkReview();
-}
-
-// =====================================================================
-// Chained Admin Form pass — runs in a hidden iframe against the real,
-// deployed Site Admin form so this never reimplements its submission
-// logic. Shares the already-granted Drive token so it never triggers a
-// second sign-in popup, and calls the form's own fetchClientDetails()
-// first so Business/Admin Contact, address, etc. come from the client
-// record Client Form just wrote — only the fields that record doesn't
-// carry (Y/N answers, delivery frequency, pricing, PO/invoice email)
-// are set directly here.
-// =====================================================================
-const ADMIN_FORM_BASE = 'https://michaelhodnett2022-coder.github.io/bioblue-site-admin/';
-
-async function runAdminFormForClient(clientId, row) {
-  return new Promise((resolve) => {
-    const iframe = document.createElement('iframe');
-    iframe.style.display = 'none';
-    let settled = false;
-    const finish = (result) => { if (settled) return; settled = true; iframe.remove(); resolve(result); };
-    const timeoutId = setTimeout(() => finish({ success:false, error:'Admin Form iframe timed out (30s)' }), 30000);
-
-    iframe.onload = async () => {
-      try {
-        const win = iframe.contentWindow;
-        let waited = 0;
-        while (typeof win.fetchClientDetails !== 'function' && waited < 5000) {
-          await new Promise(res => setTimeout(res, 100));
-          waited += 100;
-        }
-        if (typeof win.fetchClientDetails !== 'function') {
-          clearTimeout(timeoutId);
-          finish({ success:false, error:'Admin Form did not load correctly' });
-          return;
-        }
-
-        // A direct `win.gdriveToken = ...` assignment silently does nothing —
-        // gdriveToken is `let`-scoped in Admin Form, not a window property —
-        // so the token has to go in through its own setter function instead.
-        if (typeof win.setDriveToken === 'function') win.setDriveToken(gdriveToken);
-        await win.fetchClientDetails(clientId);
-
-        const set = (id, val) => { const el = win.document.getElementById(id); if (el && val !== undefined && val !== null && val !== '') el.value = val; };
-
-        set('formDate', new Date().toISOString().split('T')[0]);
-        set('completedBy', row.bdmName);
-        if (typeof win.autoFill === 'function') win.autoFill(row.bdmName);
-
-        set('invoiceEmails', row.invoiceEmail);
-        set('poEmail', row.cEmail); // PO Email = Site Contact Email, per instruction
-        set('podEmail2', row.additionalPod);
-
-        if (row.distributor && typeof win.setYN === 'function') win.setYN('distrib', bulkYN(row.distributor));
-        if (row.poReqd && typeof win.setYN === 'function') win.setYN('po', bulkYN(row.poReqd));
-        if (row.managedDelivery && typeof win.setYN === 'function') win.setYN('vendorManaged', bulkYN(row.managedDelivery));
-
-        // Delivery Frequency — sheet doesn't yet carry a real value for
-        // this batch, so every row goes in as "Other: Unknown" rather
-        // than leaving the field unanswered (it's required).
-        set('deliveryFrequency', 'Other');
-        if (typeof win.toggleDeliveryFreqOther === 'function') win.toggleDeliveryFreqOther('Other');
-        set('deliveryFrequencyOther', 'Unknown');
-
-        // Pricing — Product Type / AdBlue Price / Freight Price are
-        // split on \n in lockstep (multi-product sites). Any drum size
-        // (205L/210L/220L) is treated as the 210L product code — per
-        // instruction, they're all the same product.
-        const types = (row.productType || '').split('\n').map(s => s.trim()).filter(Boolean);
-        const adblues = (row.adbluePrice || '').toString().split('\n').map(s => s.trim());
-        const freights = (row.freightPrice || '').toString().split('\n').map(s => s.trim());
-
-        types.forEach((type, i) => {
-          const adblue = adblues[i] || '';
-          const freight = freights[i] || '';
-          const t = type.toLowerCase();
-          if (t.includes('bulk')) {
-            const chk = win.document.getElementById('chk_bulk');
-            if (chk) { chk.checked = true; if (typeof win.onBulkTick === 'function') win.onBulkTick(true); }
-            set('bulk_cpl', adblue);
-            set('bulk_freight', freight);
-          } else if (t.includes('ibc')) {
-            const chk = win.document.getElementById('chk_BB_ADB_1000');
-            if (chk) { chk.checked = true; if (typeof win.onProductTick === 'function') win.onProductTick('BB-ADB-1000', true); }
-            set('price_BB_ADB_1000', adblue);
-            set('freight_BB_ADB_1000', freight);
-          } else if (t.includes('drum')) {
-            const chk = win.document.getElementById('chk_BB_ADB_210');
-            if (chk) { chk.checked = true; if (typeof win.onProductTick === 'function') win.onProductTick('BB-ADB-210', true); }
-            set('price_BB_ADB_210', adblue);
-            set('freight_BB_ADB_210', freight);
-          }
-        });
-
-        if (typeof win.updateProgress === 'function') win.updateProgress();
-
-        let result;
-        try {
-          result = await win.uploadAndSend();
-        } catch (e) {
-          result = { success:false, error: e.message };
-        }
-        clearTimeout(timeoutId);
-        finish(result || { success:false, error:'No result returned' });
-      } catch (e) {
-        clearTimeout(timeoutId);
-        finish({ success:false, error: e.message });
-      }
-    };
-
-    iframe.src = ADMIN_FORM_BASE + '?client=' + encodeURIComponent(clientId);
-    document.body.appendChild(iframe);
-  });
-}
-
-async function runBulkSelected() {
-  const selected = bulkRows.filter(r => r.valid && r.selected);
-  if (!selected.length) { showToast('⚠️ No rows selected'); return; }
-  const runBtn = document.getElementById('bulkRunBtn');
-  runBtn.disabled = true;
-  const today = new Date().toISOString().split('T')[0];
-
-  for (let n = 0; n < selected.length; n++) {
-    const row = selected[n];
-    const i = bulkRows.indexOf(row);
-    document.getElementById('bulkProgress').textContent = `Running ${n+1} of ${selected.length}: ${row.entity} — ${row.suburb} (Client Form)`;
-
-    // Reset to a clean form before every row — otherwise leftover state
-    // from the previous submission (contacts, clone banner, etc.) could
-    // bleed into the next one.
-    clearAll();
-    const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
-    set('billingEntity', row.entity);
-    set('siteLocationName', row.tag);
-    set('descriptor', row.descriptor);
-    set('siteAddress', row.address);
-    set('suburb', row.suburb);
-    set('state', row.state);
-    set('postcode', row.postcode);
-    set('prospectDate', today);
-    set('c1Name', row.cName);
-    // Admin Form hard-requires a Business Contact role — where the sheet
-    // doesn't have one, "Site Contact" is used as a generic placeholder
-    // rather than leaving the row blocked.
-    set('c1Role', row.cRole || 'Site Contact');
-    set('c1Email', row.cEmail);
-    set('c1Phone', row.cPhone);
-    if (row.pod) set('podEmail', row.pod);
-    // Admin Contact (c4) — writes to the same Client Records columns
-    // Admin Form reads back automatically, so it never needs re-entering
-    // in the Admin Form step below.
-    set('c4Name', row.adminName);
-    set('c4Role', row.adminRole);
-    set('c4Email', row.adminEmail);
-    set('c4Phone', row.adminPhone);
-    // Other/Additional Contact (c5) — phone only, no name given for this one
-    if (row.otherContactPhone) set('c5Phone', row.otherContactPhone);
-    set('bdmName', row.bdmName);
-    autoFill(row.bdmName);
-    generateSiteName();
-    generateTrackpodName();
-    updateProgress();
-
-    let result;
-    try {
-      result = await uploadAndSend();
-    } catch (e) {
-      result = { success:false, error: e.message };
-    }
-    row.result = result || { success:false, error:'No result returned' };
-
-    const cell = document.getElementById(`bulkResult${i}`);
-    if (cell) {
-      cell.textContent = row.result.success ? `✅ ${row.result.docRef||''}` : `❌ ${row.result.error}`;
-      cell.style.color = row.result.success ? 'var(--green)' : 'var(--red)';
-    }
-    closeModal();
-
-    // Admin Form pass — only attempted if Client Form succeeded and
-    // returned a clientId to chain onto.
-    if (row.result.success && row.result.clientId) {
-      document.getElementById('bulkProgress').textContent = `Running ${n+1} of ${selected.length}: ${row.entity} — ${row.suburb} (Admin Form)`;
-      let adminResult;
-      try {
-        adminResult = await runAdminFormForClient(row.result.clientId, row);
-      } catch (e) {
-        adminResult = { success:false, error: e.message };
-      }
-      row.adminResult = adminResult || { success:false, error:'No result returned' };
-    } else {
-      row.adminResult = { success:false, error:'Skipped — Client Form did not succeed' };
-    }
-    const adminCell = document.getElementById(`bulkAdminResult${i}`);
-    if (adminCell) {
-      adminCell.textContent = row.adminResult.success ? `✅ ${row.adminResult.docRef||''}` : `❌ ${row.adminResult.error}`;
-      adminCell.style.color = row.adminResult.success ? 'var(--green)' : 'var(--red)';
-    }
-
-    if (n < selected.length - 1) await new Promise(res => setTimeout(res, 1500));
-  }
-
-  const okCount = selected.filter(r => r.result && r.result.success).length;
-  const adminOkCount = selected.filter(r => r.adminResult && r.adminResult.success).length;
-  document.getElementById('bulkProgress').textContent = `Done — ${okCount} of ${selected.length} Client Form succeeded, ${adminOkCount} of ${selected.length} Admin Form succeeded.`;
-  runBtn.disabled = false;
-}
-
 // INIT
 document.addEventListener('DOMContentLoaded', () => {
   try { if(typeof emailjs!=='undefined') emailjs.init(EMAILJS_PUBLIC_KEY); } catch(e) {}
@@ -2348,7 +1953,6 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('bdmNameTop').value = 'Michael Hodnett';
   autoFill('Michael Hodnett');
   updateProgress();
-  initBulkModeIfRequested();
 
   // ── UPDATE MODE UI ──
   const _urlMode = new URLSearchParams(window.location.search).get('mode');
