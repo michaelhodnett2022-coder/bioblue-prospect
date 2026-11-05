@@ -808,6 +808,20 @@ function applySameAs(targetNum, sourceNum) {
 // =====================================================================
 // NAMING CONVENTION
 // =====================================================================
+const BILLING_ENTITY_MAX = 50;
+function updateBillingEntityCount(billing, counter) {
+  const len = (billing||'').length;
+  window._siteNameTooLong = len > BILLING_ENTITY_MAX;
+  if (!counter) return;
+  if (!len) { counter.textContent = ''; return; }
+  if (len > BILLING_ENTITY_MAX) {
+    counter.textContent = `Billing Entity: ${len}/${BILLING_ENTITY_MAX} characters — over limit. Shorten the Billing Entity to continue.`;
+    counter.style.color = '#b91c1c'; counter.style.fontWeight = '700';
+  } else {
+    counter.textContent = `Billing Entity: ${len}/${BILLING_ENTITY_MAX} characters`;
+    counter.style.color = len > 40 ? '#b45309' : 'var(--gray-mid)'; counter.style.fontWeight = len > 40 ? '700' : '400';
+  }
+}
 function generateSiteName() {
   const billing  = (document.getElementById('billingEntity')?.value||'').trim();
   const siteLoc  = (document.getElementById('siteLocationName')?.value||'').trim();
@@ -815,37 +829,18 @@ function generateSiteName() {
   const state    = document.getElementById('state')?.value||'';
   const out      = document.getElementById('generatedSiteName');
   const counter  = document.getElementById('siteNameCharCount');
+  // The 50-character accounting-system limit applies to the BILLING ENTITY only —
+  // the Site Tag Name, suburb and state do not count towards it.
+  updateBillingEntityCount(billing, counter);
   if (!billing||!suburb||!state) {
-    if(out) out.value='';
-    if(counter) counter.textContent='';
-    window._siteNameTooLong = false;
+    if(out) { out.value=''; out.style.background=''; out.style.color=''; }
     return;
   }
   // Build name — Site Location Name is optional; Descriptor never appears in the generated name
   const name = siteLoc
     ? billing+' – '+siteLoc+' ('+suburb+', '+state+')'
     : billing+' ('+suburb+', '+state+')';
-  const len = name.length;
-
-  if (len > 50) {
-    window._siteNameTooLong = true;
-    if (out) {
-      out.value = '⚠️ Name too long — won\'t fit accounting system';
-      out.style.background = '#fee2e2'; out.style.color = '#b91c1c';
-    }
-    if (counter) {
-      counter.textContent = `${len}/50 characters — over limit. Shorten Billing Entity or Site Tag Name to continue.`;
-      counter.style.color = '#b91c1c'; counter.style.fontWeight = '700';
-    }
-  } else {
-    window._siteNameTooLong = false;
-    if (out) { out.value=name; out.style.background='#ede9fe'; out.style.color='#5b21b6'; }
-    if (counter) {
-      counter.textContent = `${len}/50 characters`;
-      counter.style.color = len > 40 ? '#b45309' : 'var(--gray-mid)';
-      counter.style.fontWeight = len > 40 ? '700' : '400';
-    }
-  }
+  if (out) { out.value=name; out.style.background='#ede9fe'; out.style.color='#5b21b6'; }
   // Sync companyName for backward compat
   const cn = document.getElementById('companyName');
   if (cn) cn.value = billing;
@@ -1744,8 +1739,8 @@ async function uploadAndSend() {
   if (!d.bdmName) { showToast('⚠️ Please select your name'); return; }
 
   if (window._siteNameTooLong) {
-    showToast('⚠️ Generated Site Name is over 50 characters — shorten Billing Entity or Site Tag Name before submitting');
-    const out = document.getElementById('generatedSiteName');
+    showToast('⚠️ Billing Entity is over 50 characters — shorten it before submitting');
+    const out = document.getElementById('billingEntity');
     if (out) out.scrollIntoView({ behavior:'smooth', block:'center' });
     return;
   }
@@ -2161,17 +2156,9 @@ async function fetchClientDetails(clientId) {
     const _gsnEl = document.getElementById('generatedSiteName');
     const _counterEl = document.getElementById('siteNameCharCount');
     if (_gsnEl && _gsnEl.value) {
-      const _len = _gsnEl.value.length;
-      if (_len > 50) {
-        window._siteNameTooLong = true;
-        _gsnEl.style.background = '#fee2e2'; _gsnEl.style.color = '#b91c1c';
-        if (_counterEl) { _counterEl.textContent = `${_len}/50 characters — over limit. Shorten Billing Entity or Site Tag Name to continue.`; _counterEl.style.color = '#b91c1c'; _counterEl.style.fontWeight = '700'; }
-      } else {
-        window._siteNameTooLong = false;
-        _gsnEl.style.background = '#ede9fe'; _gsnEl.style.color = '#5b21b6';
-        if (_counterEl) { _counterEl.textContent = `${_len}/50 characters`; _counterEl.style.color = _len > 40 ? '#b45309' : 'var(--gray-mid)'; _counterEl.style.fontWeight = _len > 40 ? '700' : '400'; }
-      }
+      _gsnEl.style.background = '#ede9fe'; _gsnEl.style.color = '#5b21b6';
     }
+    updateBillingEntityCount((document.getElementById('billingEntity')?.value||'').trim(), _counterEl);
     const _tpnEl = document.getElementById('trackpodName');
     if (_tpnEl && _tpnEl.value) { _tpnEl.style.background = '#ede9fe'; _tpnEl.style.color = '#5b21b6'; }
 
