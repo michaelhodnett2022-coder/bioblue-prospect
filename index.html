@@ -280,7 +280,7 @@
           </div>
           <div class="field-group">
             <label class="field-label required">State</label>
-            <select id="state" onchange="generateSiteName();generateTrackpodName();updateProgress()">
+            <select id="state" autocomplete="chrome-off" onchange="generateSiteName();generateTrackpodName();updateProgress()">
               <option value="">Select...</option>
               <option>WA</option><option>NSW</option><option>VIC</option>
               <option>QLD</option><option>SA</option><option>TAS</option>
@@ -291,7 +291,7 @@
 
         <div class="field-group" style="margin-bottom:10px;">
           <label class="field-label required">Suburb</label>
-          <input type="text" id="suburb" placeholder="" oninput="generateSiteName();generateTrackpodName();updateProgress()">
+          <input type="text" id="suburb" placeholder="" autocomplete="chrome-off" oninput="generateSiteName();generateTrackpodName();updateProgress()">
         </div>
 
         <div class="field-group">
@@ -313,7 +313,7 @@
         <label class="field-label">Site Address</label>
         <div class="address-field-wrap">
           <div style="position:relative;">
-            <input type="text" id="siteAddress" placeholder="" style="padding-right:110px;" oninput="addrAC(this,'addrDrop')" autocomplete="off">
+            <input type="text" id="siteAddress" placeholder="" style="padding-right:110px;" oninput="addrAC(this,'addrDrop')" autocomplete="chrome-off">
             <div id="addrDrop" style="display:none;position:absolute;top:100%;left:0;right:0;background:white;border:1px solid #ccc;border-radius:0 0 8px 8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);z-index:999;max-height:220px;overflow-y:auto;"></div>
           </div>
           <button class="gps-btn" onclick="getGPS()">📍 Use GPS</button>
@@ -324,7 +324,7 @@
       <div class="field-row">
         <div class="field-group">
           <label class="field-label">Postcode</label>
-          <input type="text" id="postcode" placeholder="" maxlength="4">
+          <input type="text" id="postcode" placeholder="" maxlength="4" autocomplete="chrome-off">
         </div>
         <div class="field-group">
           <!-- spacer -->
@@ -805,6 +805,39 @@ function applySameAs(targetNum, sourceNum) {
   }
 }
 
+// Push a contact's current values into every contact linked to it ("Same as"),
+// cascading so a chain (e.g. 4 → 3 → 1) stays in step.
+function syncLinkedContacts(srcNum) {
+  const fields = ['Name','Role','Email','Phone'];
+  for (let n = srcNum + 1; n <= 5; n++) {
+    const sel = document.getElementById(`c${n}SameAs`);
+    if (!sel || parseInt(sel.value) !== srcNum) continue;
+    fields.forEach(f => {
+      const srcEl = document.getElementById(`c${srcNum}${f}`);
+      const tgtEl = document.getElementById(`c${n}${f}`);
+      if (srcEl && tgtEl) tgtEl.value = srcEl.value;
+    });
+    syncLinkedContacts(n);
+  }
+}
+document.addEventListener('input', e => {
+  const m = /^c([1-4])(Name|Role|Email|Phone)$/.exec(e.target?.id || '');
+  if (m) syncLinkedContacts(parseInt(m[1]));
+});
+
+// Drop all "Same as" links (keeps values) — used before loading a record so
+// loaded contacts aren't overridden by a link left over from earlier.
+function unlinkContacts() {
+  [2,3,4,5].forEach(n => {
+    const sel = document.getElementById(`c${n}SameAs`); if (sel) sel.selectedIndex = 0;
+    const badge = document.getElementById(`c${n}LinkedBadge`); if (badge) badge.style.display = 'none';
+    ['Name','Role','Email','Phone'].forEach(f => {
+      const el = document.getElementById(`c${n}${f}`);
+      if (el) { el.readOnly = false; el.classList.remove('linked'); }
+    });
+  });
+}
+
 // =====================================================================
 // NAMING CONVENTION
 // =====================================================================
@@ -977,12 +1010,17 @@ function updateProgress() {
 // =====================================================================
 function collectData() {
   const g = id => document.getElementById(id)?.value || '';
-  const contact = n => ({
-    name:  g(`c${n}Name`),
-    role:  g(`c${n}Role`),
-    email: g(`c${n}Email`),
-    phone: g(`c${n}Phone`),
-  });
+  const contact = n => {
+    // "Same as" link → always read the source contact's current values
+    const src = parseInt(g(`c${n}SameAs`)) || 0;
+    if (src && src < n) return contact(src);
+    return {
+      name:  g(`c${n}Name`),
+      role:  g(`c${n}Role`),
+      email: g(`c${n}Email`),
+      phone: g(`c${n}Phone`),
+    };
+  };
   return {
     companyName:      g('billingEntity')||g('companyName'),
     billingEntity:    g('billingEntity'),
@@ -1173,6 +1211,7 @@ function selectCloneSource(clientId) {
   const idCol = _cloneHdrs.indexOf('Client ID');
   const row = _cloneFullRows.find(r => (r[idCol]||'').toString() === clientId);
   if (!row) return;
+  unlinkContacts();
   const get = col => { const i = _cloneHdrs.indexOf(col); return (i>-1 && row[i]) ? row[i].toString() : ''; };
   const set = (id, val) => { const el = document.getElementById(id); if (el && val) el.value = val; };
 
@@ -2147,6 +2186,7 @@ async function fetchClientDetails(clientId) {
       c5Phone: get('Other Contact Phone'),
     };
 
+    unlinkContacts();
     Object.entries(fields).forEach(([id, val]) => {
       const el = document.getElementById(id);
       if (el && val) el.value = val;
@@ -2552,6 +2592,7 @@ async function restoreSnapshot() {
 }
 
 function populateFromSnapshot(d) {
+  unlinkContacts();
   const sv = (id, val) => { const el = document.getElementById(id); if (el && val !== undefined && val !== null) el.value = val; };
   // Client details
   sv('billingEntity',    d.billingEntity);
