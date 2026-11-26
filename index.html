@@ -118,6 +118,10 @@
   .address-field-wrap { position:relative; }
   .gps-btn { position:absolute;right:8px;top:50%;transform:translateY(-50%);background:var(--purple);color:white;border:none;border-radius:6px;padding:5px 10px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap; }
   .gps-status { font-size:11px;color:var(--purple);margin-top:3px;min-height:16px; }
+.bb-conn{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;color:rgba(255,255,255,0.78);margin-top:5px;}
+.bb-conn-dot{width:9px;height:9px;border-radius:50%;background:rgba(255,255,255,0.35);flex-shrink:0;}
+.bb-conn.on .bb-conn-dot{background:#4ADE80;box-shadow:0 0 6px rgba(74,222,128,0.7);}
+.bb-conn.err .bb-conn-dot{background:#f87171;}
 </style>
 </head>
 <body>
@@ -130,6 +134,7 @@
         <a href="https://michaelhodnett2022-coder.github.io/bioblue-field-tools" style="display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.2);border-radius:8px;padding:4px 10px;font-size:11px;font-weight:600;color:rgba(255,255,255,0.8);text-decoration:none;margin-bottom:4px;">← Field Tools</a>
         <div class="header-title">Prospect / Client Form</div>
         <div class="header-subtitle">New &amp; Existing Clients · Lead Capture · CRM Data</div>
+        <div class="bb-conn" title="Google sign-in (shared by all Field Tools)"><span class="bb-conn-dot"></span><span class="bb-conn-label">Not connected to Google</span></div>
       </div>
     </div>
     <button onclick="confirmClear()" style="background:rgba(255,255,255,0.15);color:white;border:1px solid rgba(255,255,255,0.3);border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">🗑️ Clear</button>
@@ -402,13 +407,20 @@
           </div>
           <div class="field-row">
             <div class="field-group">
+              <label class="field-label">Mobile</label>
+              <input type="tel" id="c1Phone" placeholder="">
+            </div>
+            <div class="field-group">
+              <label class="field-label">Office phone</label>
+              <input type="tel" id="c1OfficePhone" placeholder="">
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-group">
               <label class="field-label">Email</label>
               <input type="email" id="c1Email" placeholder="">
             </div>
-            <div class="field-group">
-              <label class="field-label">Phone</label>
-              <input type="tel" id="c1Phone" placeholder="">
-            </div>
+            <div class="field-group"></div>
           </div>
         </div>
       </div>
@@ -729,6 +741,56 @@ const CLIENT_RECORDS_NAME = 'BioBlue_Client_Records.xlsx';
 const EMAILJS_SERVICE     = 'service_f0s6xv5';
 const EMAILJS_PUBLIC_KEY  = 'VOzIE82-mIbrEcuPK';
 let gdriveToken = null;
+// =====================================================================
+// SHARED GOOGLE SIGN-IN (26 Nov 2026) — every Field Tools app (Hub, forms,
+// Tracker) runs on the same site with the same Google client, so one sign-in
+// is kept on this device and shared by all of them until ~10 min before
+// Google's 1-hour expiry (margin covers a long audit upload). A sign-in made
+// in another app is picked up here too. Google rejects it (401) or it
+// expires -> cleared; the next tap asks Google again. tokenLive() replaces
+// bare gdriveToken checks. Same block in every app — keep them in step.
+// =====================================================================
+const SHARED_TOKEN_STORE = 'bb_gtoken';
+let gdriveTokenExp = 0, connRejected = false;
+function storeToken(r) {
+  gdriveToken = r.access_token;
+  gdriveTokenExp = Date.now() + ((Number(r.expires_in) || 3600) - 600) * 1000;
+  try { localStorage.setItem(SHARED_TOKEN_STORE, JSON.stringify({ t: gdriveToken, exp: gdriveTokenExp })); } catch (e) {}
+  connRejected = false;
+  updateConnDot();
+}
+function clearToken() {
+  gdriveToken = null; gdriveTokenExp = 0;
+  try { localStorage.removeItem(SHARED_TOKEN_STORE); } catch (e) {}
+}
+function tokenLive() {
+  if (gdriveToken && Date.now() < gdriveTokenExp) return true;
+  try {
+    const s = JSON.parse(localStorage.getItem(SHARED_TOKEN_STORE) || 'null');
+    if (s && s.t && Date.now() < s.exp) { gdriveToken = s.t; gdriveTokenExp = s.exp; return true; }
+  } catch (e) {}
+  clearToken();   // nothing valid here or in the store (an expired entry is removed)
+  return false;
+}
+// Green dot = signed in right now; grey = not signed in / expired; red = Google rejected it.
+function updateConnDot() {
+  const on = tokenLive();
+  document.querySelectorAll('.bb-conn').forEach(el => {
+    el.classList.toggle('on', on);
+    el.classList.toggle('err', !on && connRejected);
+    const l = el.querySelector('.bb-conn-label');
+    if (l) l.textContent = on ? 'Connected to Google' : connRejected ? 'Google sign-in expired \u2014 sign in again' : 'Not connected to Google';
+  });
+}
+const _bbRawFetch = window.fetch.bind(window);
+window.fetch = async (url, opts) => {
+  const r = await _bbRawFetch(url, opts);
+  if (r.status === 401 && String(url).includes('googleapis.com')) { clearToken(); connRejected = true; updateConnDot(); }
+  return r;
+};
+setInterval(updateConnDot, 30000);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') updateConnDot(); });
+document.addEventListener('DOMContentLoaded', updateConnDot);
 let productInterest = '';
 
 const BDM_MAP = {
@@ -1034,7 +1096,7 @@ function collectData() {
     state:            g('state'),
     postcode:         g('postcode'),
     // 5 structured contacts
-    c1: contact(1), // Site Contact
+    c1: { ...contact(1), officePhone: g('c1OfficePhone') }, // Site Contact (phone = mobile)
     c2: contact(2), // Key Decision Maker
     c3: contact(3), // Logistics
     c4: contact(4), // Admin / Invoicing
@@ -1218,6 +1280,7 @@ function selectCloneSource(clientId) {
   set('billingEntity', get('Billing Entity'));
   set('c1Name', get('Business Contact Name'));  set('c1Role', get('Business Contact Role'));
   set('c1Email', get('Business Contact Email')); set('c1Phone', get('Business Contact Phone'));
+  set('c1OfficePhone', get('Business Contact Office Phone'));
   set('c2Name', get('KDM Name'));  set('c2Role', get('KDM Role'));
   set('c2Email', get('KDM Email')); set('c2Phone', get('KDM Phone'));
   set('c3Name', get('Logistics Name'));  set('c3Role', get('Logistics Role'));
@@ -1250,7 +1313,7 @@ function clearCloneState() {
   _clonedFromClientId = null;
   const banner = document.getElementById('clonedFromBanner');
   if (banner) banner.style.display = 'none';
-  ['billingEntity','c1Name','c1Role','c1Email','c1Phone','c2Name','c2Role','c2Email','c2Phone',
+  ['billingEntity','c1Name','c1Role','c1Email','c1Phone','c1OfficePhone','c2Name','c2Role','c2Email','c2Phone',
    'c3Name','c3Role','c3Email','c3Phone','c4Name','c4Role','c4Email','c4Phone',
    'c5Label','c5Name','c5Role','c5Email','c5Phone','podEmail','podEmail2','podEmail3'].forEach(id => {
     const el = document.getElementById(id); if (el) el.value = '';
@@ -1481,12 +1544,12 @@ async function generatePDF(returnDoc=false, presetData=null) {
 // DRIVE UPLOAD + CLIENT RECORD
 // =====================================================================
 async function getDriveToken() {
-  if (gdriveToken) return;
+  if (tokenLive()) return;
   await new Promise((resolve,reject) => {
     const client = google.accounts.oauth2.initTokenClient({
       client_id: GDRIVE_CLIENT_ID,
       scope: 'https://www.googleapis.com/auth/drive.file',
-      callback: r => { if(r.access_token){gdriveToken=r.access_token;resolve();}else reject(new Error(r.error||'Sign-in failed')); },
+      callback: r => { if(r.access_token){storeToken(r);resolve();}else reject(new Error(r.error||'Sign-in failed')); },
       error_callback: e => reject(new Error(e.message||'Sign-in failed'))
     });
     client.requestAccessToken({ prompt:'' });
@@ -1512,7 +1575,7 @@ function repairClientRecordsHeaders(wb) {
   const CANONICAL = [
     'Client ID','Billing Entity','Site Name','Site Location Name','Descriptor','Trackpod Name',
     'Street Address','Suburb','State','Postcode',
-    'Business Contact Name','Business Contact Role','Business Contact Email','Business Contact Phone',
+    'Business Contact Name','Business Contact Role','Business Contact Email','Business Contact Phone','Business Contact Office Phone',
     'KDM Name','KDM Role','KDM Email','KDM Phone',
     'Logistics Name','Logistics Role','Logistics Email','Logistics Phone',
     'Admin Contact Name','Admin Contact Role','Admin Contact Email','Admin Contact Phone',
@@ -1590,6 +1653,7 @@ async function createClientRecord(d, folderId, existingClientId) {
   set('Business Contact Role',  d.c1.role);
   set('Business Contact Email', d.c1.email);
   set('Business Contact Phone', d.c1.phone);
+  set('Business Contact Office Phone', d.c1.officePhone);
   // Contact 2 — Key Decision Maker
   set('KDM Name',  d.c2.name);
   set('KDM Role',  d.c2.role);
@@ -1942,7 +2006,7 @@ function confirmClear() {
 function clearAll() {
   ['billingEntity','siteLocationName','generatedSiteName','trackpodName','companyName','prospectDate',
    'siteAddress','suburb','postcode',
-   'c1Name','c1Role','c1Email','c1Phone',
+   'c1Name','c1Role','c1Email','c1Phone','c1OfficePhone',
    'c2Name','c2Role','c2Email','c2Phone',
    'c3Name','c3Role','c3Email','c3Phone',
    'c4Name','c4Role','c4Email','c4Phone',
@@ -2035,6 +2099,7 @@ async function loadClientFromURL() {
     set('state', params.get('state'));
     set('c1Name', params.get('contactName'));
     set('c1Phone', params.get('contactPhone'));
+    set('c1OfficePhone', params.get('contactOfficePhone'));
     set('c1Email', params.get('contactEmail'));
     generateSiteName(); generateTrackpodName(); updateProgress();
     showToast('Details carried over from Prospect Tracker — complete the rest below');
@@ -2055,7 +2120,7 @@ async function loadClientFromURL() {
         if (_nm) _nm.textContent = (_urlName || _sessName) ? 'Tap below to clone ' + (_urlName || _sessName) : 'Tap below to load cloned details';
       } catch(e) {}
     }
-    if (gdriveToken) {
+    if (tokenLive()) {
       applyCloneFromURL(cloneId);
     } else {
       showCloneRetry(cloneId);
@@ -2082,7 +2147,7 @@ async function loadClientFromURL() {
   // If we already hold a token (rare on a fresh page), fetch straight away.
   // Otherwise show the "Tap to load" button so the token popup fires from a
   // real user gesture (browsers block popups opened without a click).
-  if (gdriveToken) {
+  if (tokenLive()) {
     fetchClientDetails(clientId);
   } else {
     showPrefillRetry(clientId);
@@ -2092,7 +2157,7 @@ async function loadClientFromURL() {
 async function fetchClientDetails(clientId) {
   try {
     // Acquire token if needed — this runs from a user tap, so the popup is allowed
-    if (!gdriveToken) {
+    if (!tokenLive()) {
       let _waited = 0;
       while ((typeof google === 'undefined' || !google.accounts || !google.accounts.oauth2) && _waited < 5000) {
         await new Promise(r => setTimeout(r, 100));
@@ -2107,7 +2172,7 @@ async function fetchClientDetails(clientId) {
           client_id: GDRIVE_CLIENT_ID,
           scope: 'https://www.googleapis.com/auth/drive.file',
           callback: r => {
-            if (r.access_token) { gdriveToken = r.access_token; resolve(); }
+            if (r.access_token) { storeToken(r); resolve(); }
             else reject(new Error(r.error || 'Sign-in failed'));
           },
           error_callback: e => reject(new Error(e.message || 'Sign-in failed'))
@@ -2163,6 +2228,7 @@ async function fetchClientDetails(clientId) {
       c1Role:  get('Business Contact Role')  || get('Contact Title'),
       c1Email: get('Business Contact Email') || get('Contact Email'),
       c1Phone: get('Business Contact Phone') || get('Contact Mobile'),
+      c1OfficePhone: get('Business Contact Office Phone'),
       // Contact 2 — Key Decision Maker
       c2Name:  get('KDM Name'),
       c2Role:  get('KDM Role'),
@@ -2415,7 +2481,7 @@ async function getAdminSheetId(rootFolderId) {
   const headers = [
     'Client ID','Billing Entity','Site Name','Site Location Name','Descriptor','Trackpod Name',
     'Street Address','Suburb','State','Postcode',
-    'Business Contact Name','Business Contact Role','Business Contact Email','Business Contact Phone',
+    'Business Contact Name','Business Contact Role','Business Contact Email','Business Contact Phone','Business Contact Office Phone',
     'KDM Name','KDM Role','KDM Email','KDM Phone',
     'Logistics Name','Logistics Role','Logistics Email','Logistics Phone',
     'Admin Contact Name','Admin Contact Role','Admin Contact Email','Admin Contact Phone',
@@ -2518,7 +2584,7 @@ async function getProspectJsonFolder(clientFolderId) {
 }
 
 async function saveFormSnapshot(d, clientFolderId) {
-  if (!gdriveToken || !clientFolderId) return;
+  if (!tokenLive() || !clientFolderId) return;
   const clientId = new URLSearchParams(window.location.search).get('client');
   if (!clientId) return;
   const jsonFolderId = await getProspectJsonFolder(clientFolderId);
@@ -2609,6 +2675,7 @@ function populateFromSnapshot(d) {
   sv('c1Role',  d.c1?.role  || d['Business Contact Role']  || d.contactRole);
   sv('c1Email', d.c1?.email || d['Business Contact Email'] || d.contactEmail);
   sv('c1Phone', d.c1?.phone || d['Business Contact Phone'] || d.contactMobile);
+  sv('c1OfficePhone', d.c1?.officePhone || d['Business Contact Office Phone']);
   // Contact 2 — Key Decision Maker
   sv('c2Name',  d.c2?.name  || d['KDM Name']);
   sv('c2Role',  d.c2?.role  || d['KDM Role']);
