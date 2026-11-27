@@ -420,7 +420,10 @@
               <label class="field-label">Email</label>
               <input type="email" id="c1Email" placeholder="">
             </div>
-            <div class="field-group"></div>
+            <div class="field-group">
+              <label class="field-label">Website</label>
+              <input type="text" id="website" placeholder="" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false">
+            </div>
           </div>
         </div>
       </div>
@@ -1095,6 +1098,7 @@ function collectData() {
     suburb:           g('suburb'),
     state:            g('state'),
     postcode:         g('postcode'),
+    website:          g('website'),
     // 5 structured contacts
     c1: { ...contact(1), officePhone: g('c1OfficePhone') }, // Site Contact (phone = mobile)
     c2: contact(2), // Key Decision Maker
@@ -1587,7 +1591,7 @@ function repairClientRecordsHeaders(wb) {
     'BDM Email','Max Vehicle Size','Latest Note',
     'Prospect \u2713','Quote Sent \u2713','Site Admin \u2713','Site Audit \u2713','Pkg Assessment \u2713','Customer \u2713',
     'Prospect Doc #','Admin Doc #','Audit Doc #','Packaged Doc #','Quote Doc #','Record Status',
-    'Drive Folder ID','Created Date','Created By','Cloned From Client ID','Notes Log'
+    'Drive Folder ID','Created Date','Created By','Cloned From Client ID','Notes Log','Website'
   ];
   const rows = XLSX.utils.sheet_to_json(ws, { header:1 });
   if (!rows.length) return;
@@ -1654,6 +1658,7 @@ async function createClientRecord(d, folderId, existingClientId) {
   set('Business Contact Email', d.c1.email);
   set('Business Contact Phone', d.c1.phone);
   set('Business Contact Office Phone', d.c1.officePhone);
+  set('Website', d.website);
   // Contact 2 — Key Decision Maker
   set('KDM Name',  d.c2.name);
   set('KDM Role',  d.c2.role);
@@ -2006,7 +2011,7 @@ function confirmClear() {
 function clearAll() {
   ['billingEntity','siteLocationName','generatedSiteName','trackpodName','companyName','prospectDate',
    'siteAddress','suburb','postcode',
-   'c1Name','c1Role','c1Email','c1Phone','c1OfficePhone',
+   'c1Name','c1Role','c1Email','c1Phone','c1OfficePhone','website',
    'c2Name','c2Role','c2Email','c2Phone',
    'c3Name','c3Role','c3Email','c3Phone',
    'c4Name','c4Role','c4Email','c4Phone',
@@ -2101,6 +2106,7 @@ async function loadClientFromURL() {
     set('c1Phone', params.get('contactPhone'));
     set('c1OfficePhone', params.get('contactOfficePhone'));
     set('c1Email', params.get('contactEmail'));
+    set('website', params.get('website'));
     generateSiteName(); generateTrackpodName(); updateProgress();
     showToast('Details carried over from Prospect Tracker — complete the rest below');
     if (noBanner) noBanner.style.display = 'flex';
@@ -2229,6 +2235,7 @@ async function fetchClientDetails(clientId) {
       c1Email: get('Business Contact Email') || get('Contact Email'),
       c1Phone: get('Business Contact Phone') || get('Contact Mobile'),
       c1OfficePhone: get('Business Contact Office Phone'),
+      website: get('Website'),
       // Contact 2 — Key Decision Maker
       c2Name:  get('KDM Name'),
       c2Role:  get('KDM Role'),
@@ -2493,7 +2500,7 @@ async function getAdminSheetId(rootFolderId) {
     'BDM Email','Max Vehicle Size','Latest Note',
     'Prospect \u2713','Quote Sent \u2713','Site Admin \u2713','Site Audit \u2713','Pkg Assessment \u2713','Customer \u2713',
     'Prospect Doc #','Admin Doc #','Audit Doc #','Packaged Doc #','Quote Doc #','Record Status',
-    'Drive Folder ID','Created Date','Created By','Cloned From Client ID','Notes Log'
+    'Drive Folder ID','Created Date','Created By','Cloned From Client ID','Notes Log','Website'
   ];
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.aoa_to_sheet([headers]);
@@ -2676,6 +2683,7 @@ function populateFromSnapshot(d) {
   sv('c1Email', d.c1?.email || d['Business Contact Email'] || d.contactEmail);
   sv('c1Phone', d.c1?.phone || d['Business Contact Phone'] || d.contactMobile);
   sv('c1OfficePhone', d.c1?.officePhone || d['Business Contact Office Phone']);
+  sv('website', d.website || d['Website']);
   // Contact 2 — Key Decision Maker
   sv('c2Name',  d.c2?.name  || d['KDM Name']);
   sv('c2Role',  d.c2?.role  || d['KDM Role']);
